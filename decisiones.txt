@@ -1,0 +1,456 @@
+Desarrollo: decisiones FASE 1.
+
+A. Editar el monto de apertura de caja: ¿quién puede hacerlo? (solo el propietario / propietario y cajero / nadie después de abrir)
+B. ¿Hasta cuándo se puede editar la apertura? (solo antes del primer cobro / en cualquier momento del turno / solo al cierre)
+C. ¿El cambio de apertura debe quedar en auditoría con monto anterior y nuevo? (sí / no)
+D. Si ya hubo ventas, ¿editar la apertura recalcula el esperado del cierre? (sí / no, es solo informativo)
+E. ¿El cajero puede ver el monto de apertura registrado? (sí / no)
+F. "Inventario en el medio" (punto 8C): ¿el inventario debe quedar fijo y siempre visible en el centro, o basta con la barra de mesas abajo y que el centro muestre el módulo elegido? (fijo en el centro / módulo elegido en el centro)
+G. ¿Agrego un script `npm test` que corra todas las pruebas de una vez? (sí / no)
+H. ¿Agrego índices a la base de datos para optimizar consultas? (sí / no)
+I. ¿Preparo una guía de despliegue (README) con los pasos de instalación en el bar? (sí / no)
+J. ¿Implemento token CSRF por sesión además de la verificación de Origin? (sí / no, basta con Origin)
+
+R:
+a. solo el propietario.
+b. en cualquier momento.
+c. si.
+d. si.
+e. si.
+f. quiero una correcion de mis palabras, no quiero el inventario fijo en la mitad de la pantalla, quiero una seccion donde pueda ver en un barra inferior las mesas que al seleccionar una mesa pueda ver lo que han consumido hasta que decida cobrarñes, que pueda desde esa misma seccion añadir o quitar productos.
+g. si.
+h. si.
+i. si.
+j. no, pero si recomiendas hacerlo hazmelo saber.
+
+Desarrollo: decisiones FASE 2.
+
+A. Cierre de caja por método de pago: hoy el "esperado" suma TODAS las ventas como si fueran efectivo. ¿Separamos el cierre por método (efectivo, datáfono, transferencia, Nequi) y contamos en caja solo el efectivo? (sí / no)
+B. Detalle de la venta: ¿quieres poder abrir una venta del historial y ver los productos que incluyó? (sí / no)
+C. Anulación de ventas: ¿basta con anular la venta completa (como hoy) o quieres poder anular solo algunos productos? (toda la venta / por productos)
+D. Buscador al armar la cuenta de una mesa: hoy es una lista desplegable con todos los productos. ¿Agrego un buscador y/o lector de código de barras? (buscador / buscador + código de barras / no)
+E. Reportes: ¿quieres un módulo de reportes con rango de fechas (total vendido, por método, producto más vendido, por usuario)? (sí / no)
+F. Exportar: ¿quieres descargar ventas y/o reportes en CSV? (sí / no)
+G. Recibo/ticket: ¿quieres generar o imprimir un recibo de la venta? (sí / no)
+H. Descuentos y propinas en la cuenta: ¿los agregamos? (descuento / propina / ambos / no)
+I. Varios cajeros a la vez: hoy hay un único turno de caja abierto para todos. ¿Cómo trabajan? (un solo turno compartido / un turno por cajero)
+J. Uso en tablet o celular: ¿necesitas que la interfaz se adapte bien a pantallas táctiles pequeñas? (sí / no)
+K. Aviso de alertas: ¿quieres un contador/aviso visible en el menú cuando hay alertas nuevas? (sí / no)
+L. Bug detectado: las secciones "Mesas" y "Ventas" (y botones de otros módulos) no responden porque el CSP bloquea los manejadores en línea (onclick/onchange). ¿Cómo lo arreglo? (A. Permitir en línea en el CSP: cambio de 1 línea, rápido / B. Reescribir los 14 botones con addEventListener: más trabajo y CSP estricto)
+
+R:
+a. me gustaria que muetre el total de todo lo vendido, y por aparte tambien que se muetre el metodo de pago y que despues de un total de todo.
+b. si.
+c. ambas.
+d. solo buscador, codigo de barras no se usara por el momento.
+e. si.
+f. no, prefiero verlas desde la web.
+g. no por ahora.
+h. ambos.
+i. solo hay 1 cajero.
+j. si.
+k. si.
+l. decide lo recomendado.
+
+Desarrollo: decisiones FASE 3 (rediseño de interfaz, facturación/POS y arreglos).
+
+A. Barra inferior de mesas: no quieres las mesas ahí todo el tiempo. ¿Cómo lo hacemos? (ocultarla y ver las mesas solo dentro de Facturación / mostrarla solo en Inicio / quitarla del todo)
+B. ¿La nueva pestaña "Facturación" reemplaza a "Mesas"? (sí, y "Mesas" queda solo como administración: crear/editar/eliminar / no, ambas conviven)
+C. Cuentas sin cobrar al cerrar sesión: ¿qué son esas "cuentas pendientes"? (cuentas abiertas normales que queden visibles como "pendientes por cobrar" / fiado o crédito por cliente, con nombre y saldo)
+D. Venta sin mesa ("mostrador"): ¿permitimos facturar sin asignar mesa? (sí / no)
+E. Cobro: hoy se elige el método y, en efectivo, "paga con". Para quitar la redundancia, ¿qué prefieres? (mostrar solo "recibido" y calcular el cambio / asumir pago exacto y pedir "recibido" solo si es necesario / dejar como está)
+F. Productos + Inventario: ¿los fusionamos en una sola sección? (sí, con el kardex/movimientos dentro de cada producto / no, dejar Inventario como pestaña aparte)
+G. Categorías: ¿eliminamos la pestaña "Categorías" y se administran dentro de "Productos"? (sí / no)
+H. Filtro de categorías: ¿barra horizontal de categorías (chips) en Productos y en Facturación? (sí / no)
+I. Inicio: ¿qué debe mostrar? (resumen del día y de ayer + ganancias y pérdidas / solo resumen del día / otro)
+J. "Ganancia": ¿cómo la calculo? (ventas menos el costo de lo vendido (precio de compra) / ventas menos gastos del día / solo el total vendido, sin costos)
+K. "Pérdida": ¿qué cuenta como pérdida? (gastos + descuadres de caja + anulaciones / solo gastos / gastos + anulaciones)
+L. Botones y orden general: ¿rediseño de tamaños y organización? (sí / sí, y además menú lateral más compacto/agrupado / no)
+M. Mesas: ¿cómo hacer para "eliminarlas"? (borrar solo si no tienen cuenta abierta / desactivar (ocultar) sin borrar, conservando historial / no permitir eliminar)
+N. Alertas: ¿mostramos leídas y no leídas? (sí, con filtro y opción de marcar/desmarcar como leída / separadas en dos listas / como está)
+O. Usuarios - "ver" contraseñas: no es posible (bcrypt es irreversible) y volvería inseguro el sistema. ¿Qué hago? (solo restablecer la contraseña (recomendado) / restablecer pidiendo antes tu contraseña de propietario / otra idea)
+P. Usuarios - reactivar: además de arreglar el botón "Activar", ¿alguna regla? (permitir reactivar siempre / no permitir desactivar al último propietario)
+Q. Ventas: ¿mostramos el cambio devuelto en el historial? (sí: "Cambio: $X" o "Sin cambio" / no)
+R. Configuración - logo: ¿botón de archivo estilizado y con vista previa de la imagen? (sí / solo estilizado)
+S. Confirmación de Facturación: ¿ok con catálogo a la izquierda, panel central de la venta con botones +/- y cantidad escrita de una vez, y a la derecha cliente/cajero/mesa? (sí / prefiero otro orden, lo describo)
+T. Orden de fases: ¿confirmas este orden? (A: arreglos y pulido; B: rediseño UX; C: Facturación/POS; D: Inicio/dashboard / prefiero otro orden)
+
+R:
+a. solo dentro de facturación.
+b. si, reemplaza mesas.
+c. exacto, quedan pendientes por cobrar.
+d. si.
+e. opción 1.
+f. primera opción.
+g. si.
+h. si.
+i. primera opción.
+j. lo recomendado.
+k. lo recomendado.
+l. sí, y además menú lateral más compacto/agrupado.
+m. aca quiero que exista la opcion de eliminar mesa y agreagar mesa si es necesario, despues que se guarden las mesas que hay y que el propietario agrego y ya, pero que tambien se pueda crear una mesa desde facturacion, las mesas no deben ser necesarias para facturar/vender.
+n. primera opcion.
+o. lo recomendado sin dañar la seguridad.
+p. los propietario nunca podran ser desactivados, solo los cajeros, para que un propietario pueda ser eliminado deberia de existir mas de dos usuarios con rol de propietario pero si o si debe de quedar 1.
+q. primer opcion.
+r. si.
+s. lo recomendado.
+t. si, aprobado.
+
+Desarrollo: decisiones FASE 4 (Fase C: Facturación/POS, detalles de implementación).
+
+Contexto: el concepto de la Fase C ya está decidido (Fase 3, A–T). Faltan estos
+detalles para construir Facturación sin adivinar. Recomendación entre paréntesis.
+
+A. Stock e inventario: hoy el stock baja al cobrar. Con cuentas que quedan abiertas
+   (pendientes por cobrar) el producto igual se consume. ¿Cuándo descuento el stock?
+   (1. al cobrar, como hoy / 2. al agregar el producto a la cuenta y devolverlo si se
+   quita / 3. al cobrar, las pendientes no descuentan hasta cobrar)
+   [Recomendado: 2]
+   R: 2.
+
+B. Cliente en la cuenta: en el panel derecho quieres "nombre de cliente". ¿Es obligatorio?
+   (1. obligatorio para abrir la cuenta / 2. opcional (si no se pone, queda como "Mostrador"
+   o el nombre de la mesa) / 3. no se pide)
+   [Recomendado: 2]
+R: 2.
+
+C. Varias cuentas "sin mesa" a la vez: ¿permito más de una cuenta de mostrador al tiempo?
+   (1. sí, cada una con su nombre/etiqueta / 2. solo una a la vez / 3. solo mesas)
+   [Recomendado: 1]
+   R: 1.
+
+D. Fusionar Productos + Inventario: ¿cómo lo muestro?
+   (1. una pestaña "Productos"; al abrir un producto se ve su kardex/movimientos /
+    2. una pestaña "Productos" con dos vistas internas: Productos | Movimientos /
+    3. dejar dos pestañas separadas como hoy)
+   [Recomendado: 1 o 2]
+   R: opcion 1 pero que se llame "Gestion".
+
+E. Categorías dentro de Productos: ¿cómo se administran (crear/renombrar/eliminar)?
+   (1. chips arriba + botón "Administrar categorías" que abre una ventana /
+    2. una sección plegable dentro de Productos / 3. dejarlas como están)
+   [Recomendado: 1]
+R: 1.
+
+F. Facturación en tablet/celular: la vista tiene 3 columnas (catálogo, venta, datos).
+   ¿Cómo la adapto? (1. en pantallas pequeñas apilar: catálogo arriba, venta abajo y
+   datos en un botón / 2. solo diseñarla para computador por ahora / 3. otra idea)
+   [Recomendado: 1]
+   R: en celular solo es para ver inventario, resumenes etc, no se podra facturar nada desde celular, celular es solo para administración, para ver el inventario desde casa etc
+
+G. Venta de mostrador: la venta "sin mesa" ¿va al mismo historial de Ventas?
+   (1. sí, todas juntas / 2. separadas por tipo (mesa / mostrador))
+   [Recomendado: 1]
+   R: 1.
+
+H. Venta rápida: además de armar cuentas, ¿quiero un botón de "cobro directo"
+   (cobrar sin abrir cuenta)? (sí / no)
+   [Recomendado: sí]
+R: si, para personas que solo entren a comprar por ejemplo un cigarro y se vayan.
+
+Desarrollo: decisiones FASE D (Inicio/dashboard, detalles de implementación).
+
+Contexto: el concepto ya está decidido (Fase 3, I/J/K): Inicio muestra resumen del
+día y de ayer + ganancias y pérdidas; ganancia = ventas − costo de lo vendido;
+pérdida = gastos + descuadres de caja + anulaciones. Faltan estos detalles.
+Recomendación entre paréntesis.
+
+A. El cajero, ¿ve ganancia y pérdida? El cajero no debe ver el costo de compra
+   (hoy ni siquiera recibe precio_compra).
+   (1. no: solo ventas del día, mesas y alertas / 2. sí, ve todo /
+    3. ve ganancia pero no pérdida)
+   [Recomendado: 1]
+   R: 1.
+
+B. Descuadre de caja como pérdida: ¿qué cuenta?
+   (1. solo los faltantes (diferencia negativa); los sobrantes se ignoran /
+    2. cualquier descuadre, en valor absoluto / 3. no contar descuadres)
+   [Recomendado: 1]
+R: 2.
+
+C. La anulación de una venta, ¿cuenta como pérdida por su total?
+   (1. sí, sumar el total de las ventas ANULADAS del día /
+    2. no, porque el stock se devuelve)
+   [Recomendado: 1]
+R: 2.
+
+D. Tarjetas de Inicio: ¿cómo las muestro?
+   (1. Hoy y Ayer con comparación (% de variación) / 2. solo los valores, sin
+    comparación / 3. solo el día de hoy)
+   [Recomendado: 1]
+R: 1.
+E. ¿Agrego una tarjeta de "Cuentas pendientes por cobrar" (cuentas abiertas) en Inicio?
+   (1. sí / 2. no)
+   [Recomendado: 1]
+R: 1.
+
+Desarrollo: decisiones FASE E (Segunda fase de criticas: ajustes de Facturación,
+Ventas, Gestión, Caja, Mesas, Alertas, Usuarios y monitoreo en vivo del cajero).
+
+Contexto: la "Segunda fase de criticas" (criticas.md) pide rediseñar Facturación,
+corregir bugs y añadir funciones nuevas. Para no adivinar, necesito estas
+decisiones. Recomendación entre paréntesis; escribe tu respuesta bajo cada "R:".
+
+A. Inicio está "bugueado": ¿qué ves exactamente? (pantalla en blanco / error en
+   pantalla / los números no cuadran / no carga / otra cosa). Descríbelo.
+   R: este es el error = Cannot read properties of undefined (reading 'ventas')
+
+B. Facturación: quieres ELIMINAR el panel derecho completo (cliente + mesas +
+   pendientes). ¿Dónde muevo las mesas y las cuentas pendientes?
+   (1. a una pestaña interna abajo llamada "Por defecto", con una pestaña por
+      mesa / 2. a un botón que abre un panel deslizable / 3. otra idea)
+   [Recomendado: 1]
+   R: 1.
+
+C. Facturación: al quitar el panel derecho, quieres que la pantalla tenga a la
+   izquierda el buscador de productos GRANDE (casi toda la pantalla) y a la
+   derecha la "Venta actual" (items + total), en 2 columnas.
+   (1. sí, buscador grande a la izquierda + venta actual a la derecha /
+    2. prefiero otro orden, lo describo)
+   [Recomendado: 1]
+   R: 1.
+
+D. Facturación "Por defecto" (ventas sin mesa): dijiste que con un "+" se añade
+   una venta nueva y que puede haber varias. Confirmo:
+   (1. sí, varias ventas sin mesa, cada una con nombre/etiqueta opcional /
+    2. solo una venta sin mesa a la vez)
+   [Recomendado: 1]
+   R: 1.
+
+E. Menú de módulos (barra lateral): quieres que se oculte cuando no se usa, para
+   tener más espacio.
+   (1. se oculta con un botón (☰) y se muestra al pasar el mouse o al pulsar /
+    2. se colapsa a solo íconos / 3. dejarlo como está)
+   [Recomendado: 1]
+   R: 1.
+
+F. Categorías: ya son "chips" (etiquetas) en una fila; dices que se ven una
+   debajo de otra. ¿En qué pantalla pasa (Facturación / Gestión / ambas) y en qué
+   dispositivo (PC / celular)? Y confirmo que quito el chip "Todas" (queda
+   "todas" por defecto al no elegir ninguna).
+   R: se veia en facturacion por el tamaño de la pantalla de productos error mio.
+
+G. Ventas (historial): mostrar el ROL en vez del nombre completo.
+   (1. solo el rol (CAJERO / PROPIETARIO) / 2. apodo + rol / 3. nombre + rol)
+   [Recomendado: 2]
+   R: 2.
+
+H. Fechas: quieres "hoy" por defecto, que se actualice cada día y sin el texto
+   feo "dd/mm/aaaa".
+   (1. el mismo campo pero con la fecha de hoy ya puesta (deja de verse
+     "dd/mm/aaaa") y que cambie sola al pasar la medianoche / 2. reemplazarlo por
+     botones "Hoy / Ayer / Fecha…" / 3. otra idea)
+   [Recomendado: 1]
+   R: 1.
+
+I. "Registros por orden de llegada, no por más ventas": ¿a qué pantalla te
+   refieres (Reportes → "por usuario", o la lista de Ventas)? Lo ordeno por orden
+   de llegada (creación) de arriba hacia abajo.
+   R: si, en reportes por usuario.
+
+J. Gestión: bug — al filtrar "cervezas" no sale ningún producto y al volver a
+   "todos" desaparece la categoría "cervezas". Lo investigo y lo corrijo, y dejo
+   "todos" por defecto. ¿Algo más que hayas notado en Gestión?
+   R: no pude notar mas nada, pero arreglalo.
+
+K. Caja: quieres que quede registro de en cuánto se cerró la caja.
+   (1. nueva sección "Historial de turnos cerrados" con apertura, efectivo
+     esperado, monto declarado y diferencia / 2. solo mostrar los datos al
+     cerrar / 3. otra idea)
+   [Recomendado: 1]
+   R: 1.
+
+L. Alertas: quitar el filtro "Todas" y dejar solo "No leídas" y "Leídas".
+   Confirmo. ¿Alguna otra cosa de alertas?
+   R: perfecto.
+
+M. Mesas: quitar los botones de cada tarjeta; al tocar la tarjeta se abre un
+   menú con las acciones. ¿Qué acciones incluyo?
+   (1. Abrir / Ver cuenta / Editar / Eliminar según el estado y tu rol /
+    2. solo Ver cuenta y Editar / 3. otra combinación)
+   [Recomendado: 1]
+   R: 1.
+
+N. Usuarios "en línea": ¿cómo defino que un cajero está en línea?
+   (1. tiene una sesión abierta y sin expirar / 2. tuvo actividad en los últimos
+    5 minutos (aprox.) / 3. tiene su turno de caja abierto)
+   [Recomendado: 2]  Y la lista de Usuarios, ¿se actualiza sola cada pocos
+   segundos? (sí / no)
+   R: 2. si.
+
+O. Ver en tiempo real qué hace el cajero (desde tu sesión de propietario, en PC o
+   celular): para lograrlo, el navegador del cajero debe avisar en qué módulo
+   está. ¿Qué quieres ver y cómo se actualiza?
+   (1. un panel "En vivo" del propietario con el módulo actual del cajero y su
+     última acción, que se refresca cada ~5 segundos / 2. solo el módulo actual /
+    3. prefiero notificaciones)
+   [Recomendado: 1]
+   R: olvida esto, ya no quiero implementarlo.
+
+P. Orden de la Fase E (es mucho trabajo). ¿Lo partimos así?
+   (E1: bugs y ajustes simples — Inicio, Ventas (rol/fecha/orden), Alertas,
+        Mesas, Caja (registro), Gestión (bug) /
+    E2: rediseño de Facturación + menú ocultable /
+    E3: Usuarios en línea + monitoreo en vivo del cajero)
+   (1. sí, en ese orden / 2. prefiero otro orden, lo describo)
+   [Recomendado: 1]
+   R: 1.
+
+Q. La base de datos tiene datos de prueba (mesas ocupadas, cuentas abiertas,
+   turnos, etc.). ¿Los dejo como están para hacer pruebas, o los limpio?
+   (1. dejarlos / 2. limpiarlos, empezar de cero)
+   [Recomendado: 1]
+   R: 1. aunnque yo personalmente quise probar y borre mesas y categorias.
+
+quiero añadir algo mas que se me paso poner; quiero que en cada menu que sea extendible hacia abajo tenga barra de desplazamiento, por que a veces no me deja usar los botnes de abajo, como editar usuarios (debo poner pantalla completa) o en categorias.
+
+Desarrollo: decisiones FASE F (Fase E2: rediseño de Facturación + menú ocultable).
+
+Contexto: el concepto ya está decidido (Fase E, B=1/C=1/D=1/E=1): Facturación
+queda en 2 columnas (catálogo grande a la izquierda, "Venta actual" a la derecha),
+las mesas y cuentas pendientes pasan a una barra de pestañas abajo, y el menú
+lateral se puede ocultar con un botón ☰. Faltan estos detalles. Recomendación
+entre paréntesis; escribe tu respuesta bajo cada "R:".
+
+A. Barra de cuentas (mesas + ventas sin mesa): ¿dónde va?
+   (1. barra ancha pegada al borde inferior de la pantalla, con la venta actual
+       encima / 2. dentro de la columna derecha "Venta actual")
+   [Recomendado: 1]
+   R: 1.
+
+B. Pestaña "Por defecto" y botones de la barra: ¿cómo funciona?
+   (1. [Por defecto] es una venta nueva sin mesa en blanco; "+ venta" añade otra
+       venta sin mesa; "+ mesa" crea o abre una mesa; cada venta sin mesa puede
+       llevar una etiqueta/nombre opcional /
+    2. otra combinación, la describo)
+   [Recomendado: 1]
+   R: no, te lo explico; en [Por defecto] quiero que sea multifuncional, que sirva para tenerla fija y realizar ventas rapidas sin necesidad de abrir una cuenta de facturacion en una mesa, pero que si yo agrego productos alli y luego le doy al "+" los productos que puse en [Por defecto] salgan en una nueva pestaña inferior que se llame igual [Por defecto] pero que esa sea editable, como ponerle mesa, cliente etc, y que se le pueda seguir añadiendo productos.
+
+C. Campo "Cliente (opcional)" (hoy está en el panel derecho y solo aplica a ventas
+   sin mesa): ¿lo dejo solo para ventas sin mesa o también para mesas?
+   (1. solo para ventas sin mesa / 2. también en mesas / 3. quitarlo)
+   [Recomendado: 1]
+   R:  quitalo, pero guiate de la respuesta B.
+
+D. Botón "Guardar y liberar" (deja la cuenta pendiente y limpia la venta): con las
+   pestañas, ¿lo mantengo?
+   (1. sí: guarda la cuenta como pestaña pendiente y deja "Por defecto" limpia /
+    2. ya no hace falta, quitarlo)
+   [Recomendado: 1]
+   R: ese boton no hace nada si pones como lo quiero, guiate de la respuesta B.
+
+E. Botón "Cobro directo" (cobra en efectivo sin abrir cuenta): ¿se queda?
+   (1. sí, se queda (solo para venta sin mesa) / 2. quitarlo)
+   [Recomendado: 1]
+   R: guiate de la respuesta B.
+
+F. Menú ocultable ☰: ¿cómo se comporta?
+   (1. un clic oculta/muestra y, cuando está oculto, se asoma al pasar el mouse
+       por el borde izquierdo; recuerda el estado entre recargas /
+    2. solo clic para ocultar/mostrar, sin asomarse con el mouse /
+    3. otra idea)
+   [Recomendado: 1]
+   R: 1. 
+
+
+Desarrollo: decisiones FASE G (Tercera fase de criticas: Facturación, Ventas,
+Gestión (imagen), Reportes, Mesas con zonas y Configuración).
+
+Contexto: la "Tercera fase de criticas" (criticas.md) tiene 8 cambios. La mayoría
+son claros, pero faltan estas decisiones para no adivinar. Recomendación entre
+paréntesis; escribe tu respuesta bajo cada "R:".
+
+Nota: el rol CAJERO no entra al módulo Configuración (no aparece en el menú y el
+servidor lo bloquea), por lo que "Gestionar cuenta" (crítica 8) aplica solo a la
+cuenta del PROPIETARIO.
+
+A. Facturación "Visitante": renombrar la pestaña "Por defecto" a "Visitante" en
+   todas partes (pestaña inferior, "Venta actual" y cuentas de mostrador sin
+   cliente). ¿Confirmas? (sí / no, otro nombre)
+   [Recomendado: sí]
+   R: si
+
+B. Facturación: al pulsar "+" con productos cargados en "Visitante" y elegir una
+   mesa, los productos pasan a la cuenta de esa mesa y "Visitante" queda vacía.
+   ¿Qué hago si la mesa elegida YA está ocupada?
+   (1. unir los productos en esa cuenta /
+    2. no permitir: solo mesas libres; si está ocupada, avisar)
+   [Recomendado: 1]
+   R: 2.
+   B2. ¿Paso también el nombre del cliente de "Visitante" a la mesa? (sí / no)
+   [Recomendado: sí]
+   R: igual en Visitante no se podra cambiar el nombre, entonces al pasar a mesa si se podra.
+
+C. Ventas: ver todas las ventas de todos los días.
+   (1. un botón "Ver todas" que quita el filtro de día y ordena de la más antigua
+       a la más reciente / 2. otra idea)
+   [Recomendado: 1]
+   R: 1
+   C2. Si hay muchas ventas, ¿pagino la lista o la muestro completa?
+   (paginar / completa)
+   [Recomendado: paginar]
+   R: paginar.
+
+D. Gestión: recortar / editar / mover la imagen del producto.
+   (1. recortador propio con canvas: zoom + arrastrar + rotar, sin librerías /
+    2. librería externa tipo Cropper.js)
+   [Recomendado: 1]
+   R: 1.
+
+E. Reportes: "Productos más vendidos" ordenado por unidades por defecto, con un
+   selector "Más unidades / Más ingresos".
+   (1. sí, así / 2. otra idea)
+   [Recomendado: 1]
+   R: 1.
+
+F. Mesas con zonas ("Terraza #", "Barra #", segundo piso, etc.):
+   (1. agregar columna "zona" con unicidad por (zona + número) → "Terraza 1",
+       "Barra 2" (requiere migrar la tabla) /
+    2. nombre por mesa totalmente libre, sin número /
+    3. número único global y "zona" solo como etiqueta)
+   [Recomendado: 1]
+   R: 1.
+
+G. Configuración "Gestionar cuenta": qué puede editar cada usuario en su propia
+   cuenta.
+   (1. todos editan nombre, apodo, usuario y correo; la contraseña solo el
+       propietario (como hoy) /
+    2. todos editan también su propia contraseña (pidiendo la actual))
+   [Recomendado: 2]
+   R: 1 y 2.
+   G2. ¿Muestro el rol (solo lectura) en esa ventana? (sí / no)
+   [Recomendado: sí]
+   R: si.
+
+H. Orden de trabajo de la Fase G. ¿Lo partimos así?
+   (G1: cambios simples — "Visitante", paso de productos a mesa, Ventas "Ver
+        todas", Reportes (orden) y Configuración "Gestionar cuenta" + botón de
+        imagen más lindo /
+    G2: Mesas con zonas /
+    G3: Recorte / edición de la imagen de producto)
+   (1. sí, en ese orden / 2. prefiero otro orden, lo describo)
+   [Recomendado: 1]
+   R: 1.
+
+I. Versionado "MAYOR.MENOR.PARCHE" (crítica nueva, segunda sección): mostrar la
+   versión de la app y subirla según la fase/trabajo hecho.
+   I1. Fuente única de la versión: (1. el campo "version" de package.json, que el
+       servidor lee y expone al frontend / 2. un valor aparte en la base de datos)
+   [Recomendado: 1]
+   R:1.
+   I2. ¿Dónde se muestra la versión? (1. pie del menú lateral, siempre visible /
+       2. solo en Configuración / 3. en el login también)
+   [Recomendado: 1, y también 3]
+   R: 1.
+   I3. Regla de incremento que usaré:
+       - MAYOR: rediseños o fases grandes (p. ej. esta entrega)
+       - MENOR: funciones nuevas
+       - PARCHE: correcciones de bugs
+       ¿De acuerdo? (sí / cambio la regla)
+   [Recomendado: sí]
+   R: si.
+   I4. Versión inicial para esta Fase G: (1. 2.0.0 porque incluye rediseño y
+       funciones nuevas / 2. 1.1.0 / 3. otra)
+   [Recomendado: 1]
+   R: 1.

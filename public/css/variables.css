@@ -1,0 +1,81 @@
+/* ============================================================
+   Chamalú Beer - Tokens de diseño (Fase 3 - Fase B)
+   Colores, radios, sombras, espaciados y tipografía.
+   Tema único oscuro (se eliminó el modo claro).
+   ============================================================ */
+
+:root {
+  /* Superficies */
+  --bg: #0f172a;
+  --surface: #1e293b;
+  --surface-2: #24334a;
+  --border: #334155;
+  --border-strong: #475569;
+
+  /* Texto */
+  --text: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-soft: #64748b;
+
+  /* Marca */
+  --primary: #4f7cf7;
+  --primary-hover: #6b93ff;
+  --primary-soft: rgba(79, 124, 247, 0.16);
+  --primary-contrast: #ffffff;
+  --accent: #f59e0b;
+
+  /* Estados */
+  --success: #22c55e;
+  --success-soft: rgba(34, 197, 94, 0.16);
+  --danger: #ef4444;
+  --danger-soft: rgba(239, 68, 68, 0.16);
+  --warning: #f59e0b;
+  --warning-soft: rgba(245, 158, 11, 0.16);
+
+  /* Barra superior / menú */
+  --topbar-bg: #0b1120;
+  --topbar-text: #f1f5f9;
+  --sidebar-bg: #1e293b;
+
+  /* Sombras */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+
+  /* Radios */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius: 12px;
+  --radius-lg: 16px;
+  --radius-pill: 999px;
+
+  /* Espaciados */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  /* Tipografía */
+  --fs-xs: 11px;
+  --fs-sm: 12px;
+  --fs-md: 13px;
+  --fs-base: 14px;
+  --fs-lg: 16px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+
+  /* Movimiento */
+  --transition: 160ms ease;
+
+  /* Foco */
+  --focus-ring: 0 0 0 3px var(--primary-soft);
+
+  /* Scrollbars */
+  --scrollbar-size: 10px;
+  --scrollbar-thumb: #3d4d68;
+  --scrollbar-thumb-hover: #55698c;
+  --scrollbar-track: transparent;
+}

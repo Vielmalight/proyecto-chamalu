@@ -1,0 +1,27 @@
+{
+  "name": "chamalu-beer",
+  "version": "2.0.0",
+  "description": "Sistema de inventario, ventas y caja para el bar Chamalú Beer",
+  "type": "module",
+  "main": "server/app.js",
+  "scripts": {
+    "start": "node server/app.js",
+    "dev": "node --watch server/app.js",
+    "test": "node tests/run-all.mjs",
+    "test:integracion": "node --test tests/integracion.test.js",
+    "test:e2e": "node --test tests/e2e.test.js",
+    "test:smoke": "node tests/smoke-frontend.mjs"
+  },
+  "engines": {
+    "node": ">=22.5"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.18.0",
+    "@vercel/blob": "^2.8.2",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.7",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "helmet": "^8.0.0"
+  }
+}

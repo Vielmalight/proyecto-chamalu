@@ -1,0 +1,72 @@
+ESTRUCTURA DEL PROYECTO — CHAMALÚ BEER
+======================================
+
+chamalu-beer/
+├── package.json          # Dependencias y scripts (npm start, npm run dev)
+├── .env.example          # Plantilla de variables de entorno (secretos)
+├── .gitignore            # Qué archivos ignora Git
+├── AGENTS.md             # Reglas y especificaciones del proyecto
+├── MEMORY.md             # Estado, decisiones y pendientes
+├── decisiones.txt        # Decisiones tomadas (solo lectura, sin código)
+├── ESTRUCTURA.txt        # Este archivo: explicación de la estructura
+│
+├── server/               # BACKEND (Node.js + Express)
+│   ├── app.js            # Punto de entrada: middleware y montaje de rutas
+│   ├── config/
+│   │   ├── db.js         # Conexión a SQLite, creación de tablas y seed del admin
+│   │   └── constants.js  # Roles, módulos por rol, fechas en Colombia (nowCO)
+│   ├── middlewares/
+│   │   ├── auth.js       # requireAuth: valida sesión activa y vigencia
+│   │   ├── roles.js      # requireRole: exige un rol específico
+│   │   ├── rateLimit.js  # Limita intentos de login fallidos
+│   │   └── auditoria.js  # logAuditoria: registra acciones importantes
+│   └── routes/
+│       ├── auth.routes.js          # Login, logout, datos de sesión
+│       ├── caja.routes.js          # Apertura/cierre, caja chica, resumen de turno
+│       ├── categorias.routes.js    # CRUD de categorías (propietario)
+│       ├── productos.routes.js     # CRUD de productos + imágenes (propietario)
+│       ├── mesas.routes.js         # CRUD de mesas, abrir mesa, ver cuenta
+│       ├── cuentas.routes.js       # Agregar items y cobrar cuenta (venta atómica)
+│       ├── ventas.routes.js        # Historial de ventas y anulación (propietario)
+│       ├── inventario.routes.js    # Kardex: entradas, salidas y movimientos
+│       ├── gastos.routes.js        # Gastos (usado desde el módulo Caja)
+│       ├── alertas.routes.js       # Alertas y su generación automática
+│       ├── usuarios.routes.js      # Usuarios, perfil y contraseñas
+│       ├── configuracion.routes.js # Configuración del bar y logo
+│       └── dashboard.routes.js     # Resumen del panel principal (Inicio)
+│
+├── public/               # FRONTEND (HTML, CSS, JS puros)
+│   ├── index.html        # Pantalla de login + estructura principal (SPA)
+│   ├── css/
+│   │   ├── variables.css # Colores del tema claro/oscuro
+│   │   ├── layout.css    # Barra superior, menú lateral, modales
+│   │   └── components.css# Botones, inputs, tarjetas, mensajes, dashboard
+│   ├── js/
+│   │   ├── app.js        # Arranque: decide login o shell y orquesta módulos
+│   │   ├── api.js        # Llamadas al backend (fetch)
+│   │   ├── state.js      # Estado global (usuario, tema, módulos, turno)
+│   │   ├── ui.js         # Utilidades: tema, mensajes, modales, escapeHtml
+│   │   └── modules/      # Una pantalla por módulo
+│   │       ├── inicio.js         # Panel principal (dashboard)
+│   │       ├── auth.js           # Login y apertura de caja
+│   │       ├── productos.js      # Productos
+│   │       ├── categorias.js     # Categorías
+│   │       ├── mesas.js          # Mesas y cuentas
+│   │       ├── ventas.js         # Historial de ventas
+│   │       ├── inventario.js     # Kardex y ajustes de stock
+│   │       ├── caja.js           # Caja, caja chica y gastos
+│   │       ├── alertas.js        # Centro de alertas
+│   │       ├── usuarios.js       # Gestión de usuarios
+│   │       └── configuracion.js  # Configuración del bar
+│   ├── img/
+│   │   ├── logo-default.svg     # Logo por defecto
+│   │   └── producto-default.svg # Imagen por defecto de producto
+│   └── uploads/          # Imágenes que suba el propietario (productos, logo)
+│
+├── tests/                # PRUEBAS (node --test)
+│   ├── integracion.test.js  # Conexión a BD, schema y datos base
+│   ├── e2e.test.js          # Flujo completo por HTTP (servidor encendido)
+│   └── RESULTADOS.md        # Resultados de las pruebas
+│
+└── data/                 # BASE DE DATOS
+    └── chamalu.db        # Archivo SQLite (se crea solo al arrancar)
