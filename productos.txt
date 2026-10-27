@@ -1,0 +1,56 @@
+Necesito cargar el inventario inicial en el proyecto "Sistema de Inventario - Chamalú Beer" y que las categorías se puedan crear desde la web.
+
+REGLAS:
+- Antes de modificar cualquier cosa, muéstrame tu plan y espera mi aprobación.
+- Revisa primero cómo están definidas las tablas de productos y categorías en la base SQLite (data/chamalu.db) y adapta los datos a esa estructura. No cambies el esquema sin preguntarme.
+- Código básico y fácil de leer, con comentarios, sin archivos complejos nuevos sin preguntarme.
+
+PARTE 1: CATEGORÍAS CREABLES DESDE LA WEB
+- Quiero poder crear categorías nuevas desde la interfaz (por ejemplo: Rones, Cigarrillos, Dulces, Snacks), sin tocar el código.
+- Debe poder crear, renombrar y eliminar categorías.
+- Al crear un producto, debo poder elegir una categoría existente o crear una nueva en ese momento.
+- No permitir categorías duplicadas (sin distinguir mayúsculas/minúsculas) ni nombres vacíos.
+- No permitir eliminar una categoría que tenga productos. Mostrar un mensaje claro y pedir mover los productos primero.
+- Solo el propietario puede crear, renombrar o eliminar categorías. El cajero solo las ve.
+- Revisa si ya existe algo de esto en el proyecto y reutilízalo antes de crear algo nuevo.
+
+PARTE 2: CARGA DEL INVENTARIO INICIAL
+- Si las categorías no existen, créalas (Gaseosas, Jugos, Aguas, Soda, Gatorade, Licores). Rones queda pendiente: se creará después desde la web.
+- Haz la carga con un script simple, con comentarios, que se ejecute una sola vez y que no duplique productos si se corre de nuevo.
+- Los productos sin precio (columna precio_cop vacía) deben quedar marcados como "precio pendiente". Avísame cuáles son y no los dejes vender a $0.
+- Los six packs son productos separados de la unidad, cada uno con su propio stock.
+- Los productos con stock 0 se cargan igual (no los omitas).
+
+DATOS (CSV: categoria,producto,presentacion,stock,precio_cop):
+
+categoria,producto,presentacion,stock,precio_cop
+Gaseosas,Coca-Cola,400 ml,16,4000
+Gaseosas,Coca-Cola,1.5 L,4,8000
+Gaseosas,Postobón manzana,400 ml,2,4000
+Gaseosas,Colombiana,400 ml,3,4000
+Gaseosas,Postobón uva,400 ml,3,4000
+Gaseosas,Pony Malta vidrio,unidad,22,3000
+Jugos,Hit mango,500 ml,2,4500
+Jugos,Hit frutas tropicales,500 ml,9,4500
+Jugos,Hit naranja piña,500 ml,2,4500
+Jugos,Del Valle naranja,400 ml,6,3500
+Aguas,Brisa con gas,600 ml,11,3000
+Aguas,H2OH maracuyá,600 ml,2,3000
+Aguas,H2OH limonata,600 ml,1,3000
+Aguas,Agua Cristal,600 ml,18,3000
+Aguas,Agua Cristal,300 ml,11,2000
+Soda,Bretaña vidrio,300 ml,7,4000
+Gatorade,Gatorade rojo,500 ml,10,6500
+Gatorade,Gatorade azul,500 ml,2,6500
+Licores,Águila vidrio,unidad,42,4000
+Licores,Águila light vidrio,unidad,30,
+Licores,Club Colombia dorada vidrio,unidad,16,
+Licores,Poker vidrio,unidad,26,
+Licores,Costeña Bacana vidrio,unidad,18,
+Licores,Stella Artois,unidad,2,
+Licores,Stella Artois,six pack,1,
+Licores,Coronita Extra vidrio,unidad,4,
+Licores,Coronita Extra vidrio,six pack,0,
+Licores,Cusqueña vidrio,unidad,5,
+Licores,Cusqueña vidrio,six pack,0,
+Licores,Baltika vidrio,unidad,2,

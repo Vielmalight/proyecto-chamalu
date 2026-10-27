@@ -145,6 +145,9 @@ router.post('/:id/items', async (req, res, next) => {
 
     const producto = await db.prepare('SELECT * FROM productos WHERE id = ? AND activo = 1').get(producto_id);
     if (!producto) return res.status(404).json({ error: 'Producto no encontrado' });
+    if (producto.precio_pendiente === 1 || producto.precio_venta <= 0) {
+      return res.status(400).json({ error: 'Este producto tiene precio pendiente. Asigna un precio desde Gestión antes de venderlo.' });
+    }
     if (producto.stock_actual < cantidad) {
       return res.status(400).json({ error: `Stock insuficiente. Hay ${producto.stock_actual} ${producto.unidad_medida}` });
     }

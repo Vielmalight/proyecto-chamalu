@@ -70,6 +70,7 @@ export async function renderGestion(container) {
     cont.innerHTML = S.productos.map((p) => {
       const sinStock = p.stock_actual <= 0;
       const bajo = p.stock_actual <= p.stock_minimo;
+      const precioPendiente = p.precio_pendiente === 1 || p.precio_venta <= 0;
       const precioCompra = esPropietario && p.precio_compra != null
         ? `<span class="gp-costo">Costo: ${pesos(p.precio_compra)}</span>` : '';
       const acciones = esPropietario ? `
@@ -83,10 +84,11 @@ export async function renderGestion(container) {
           <div class="gp-info" data-accion="kardex" data-id="${p.id}">
             <span class="gp-nombre">${escapeHtml(p.nombre)}</span>
             <span class="gp-cat">${escapeHtml(p.categoria_nombre || 'Sin categoría')}</span>
+            ${precioPendiente ? '<span class="tag-mov tag-salida">PRECIO PENDIENTE</span>' : ''}
           </div>
           <div class="gp-stockline">
             <span class="gp-stock ${bajo ? 'stock-bajo' : ''} ${sinStock ? 'sin-stock' : ''}">${p.stock_actual} ${escapeHtml(p.unidad_medida)}</span>
-            <span class="gp-precio">${pesos(p.precio_venta)}</span>
+            <span class="gp-precio">${precioPendiente ? 'PENDIENTE' : pesos(p.precio_venta)}</span>
           </div>
           ${precioCompra}
           <div class="gp-acciones">
@@ -120,7 +122,7 @@ export async function renderGestion(container) {
         <div class="form-grid">
           <div><label>Nombre *</label><input type="text" id="prod-nombre" value="${escapeHtml(datos.nombre || '')}"></div>
           <div><label>Categoría</label><select id="prod-categoria"><option value="">Sin categoría</option></select></div>
-          <div><label>Precio de venta *</label><input type="number" id="prod-precio-venta" value="${datos.precio_venta || ''}" min="1" step="100"></div>
+          <div><label>Precio de venta ${datos.precio_pendiente ? '(pendiente)' : '*'}</label><input type="number" id="prod-precio-venta" value="${datos.precio_pendiente ? 0 : (datos.precio_venta || '')}" min="0" step="100"></div>
           <div><label>Precio de compra</label><input type="number" id="prod-precio-compra" value="${datos.precio_compra || 0}" min="0" step="100"></div>
           <div><label>Stock actual</label><input type="number" id="prod-stock" value="${datos.stock_actual ?? 0}" min="0"></div>
           <div><label>Stock mínimo</label><input type="number" id="prod-stock-min" value="${datos.stock_minimo ?? 0}" min="0"></div>
@@ -147,18 +149,46 @@ export async function renderGestion(container) {
     `;
     document.body.appendChild(overlay);
 
-    try {
-      const cats = await api('/api/categorias');
-      if (!overlay.isConnected) return;
-      const sel = overlay.querySelector('#prod-categoria');
-      cats.forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c.id;
-        opt.textContent = c.nombre;
-        if (datos.categoria_id === c.id) opt.selected = true;
-        sel.appendChild(opt);
+    async function cargarCatsEnSelect() {
+      try {
+        const cats = await api('/api/categorias');
+        if (!overlay.isConnected) return;
+        const sel = overlay.querySelector('#prod-categoria');
+        sel.innerHTML = '<option value="">Sin categoría</option>';
+        cats.forEach((c) => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.nombre;
+          if (datos.categoria_id === c.id) opt.selected = true;
+          sel.appendChild(opt);
+        });
+      } catch { /* sin acceso */ }
+    }
+    await cargarCatsEnSelect();
+
+    // Crear categoría al momento desde el modal de producto
+    const labelCat = overlay.querySelectorAll('.form-grid label')[1];
+    if (labelCat) {
+      const btnNuevaCat = document.createElement('button');
+      btnNuevaCat.type = 'button';
+      btnNuevaCat.className = 'btn btn-ghost btn-sm';
+      btnNuevaCat.textContent = '+ Nueva categoría';
+      btnNuevaCat.style.marginLeft = '8px';
+      labelCat.appendChild(btnNuevaCat);
+      btnNuevaCat.addEventListener('click', async () => {
+        const nombre = prompt('Nombre de la nueva categoría:');
+        if (!nombre || !nombre.trim()) return;
+        try {
+          const res = await api('/api/categorias', { method: 'POST', body: JSON.stringify({ nombre: nombre.trim() }) });
+          await cargarCatsEnSelect();
+          if (res?.id) overlay.querySelector('#prod-categoria').value = res.id;
+          toast('Categoría creada', 'success');
+          refrescar();
+        } catch (err) {
+          toast(err.message, 'error');
+        }
       });
-    } catch { /* sin acceso */ }
+    }
 
     overlay.querySelector('#prod-cancelar').addEventListener('click', () => overlay.remove());
 
@@ -218,10 +248,14 @@ export async function renderGestion(container) {
     overlay.querySelector('#prod-guardar').addEventListener('click', async () => {
       const errEl = overlay.querySelector('#prod-error');
       errEl.textContent = '';
+      const pvRaw = overlay.querySelector('#prod-precio-venta').value;
+      const pv = parseInt(pvRaw, 10);
+      const marcarPendiente = !Number.isInteger(pv) || pv <= 0;
       const body = {
         nombre: overlay.querySelector('#prod-nombre').value.trim(),
         categoria_id: overlay.querySelector('#prod-categoria').value || null,
-        precio_venta: parseInt(overlay.querySelector('#prod-precio-venta').value, 10),
+        precio_venta: marcarPendiente ? 0 : pv,
+        precio_pendiente: marcarPendiente ? 1 : 0,
         precio_compra: parseInt(overlay.querySelector('#prod-precio-compra').value, 10) || 0,
         stock_actual: parseInt(overlay.querySelector('#prod-stock').value, 10) || 0,
         stock_minimo: parseInt(overlay.querySelector('#prod-stock-min').value, 10) || 0,
@@ -291,7 +325,7 @@ export async function renderGestion(container) {
         overlay.querySelector('#cats-nombre').value = '';
         await pintar();
         refrescar();
-      } catch (err) { errEl.textContent = err.message; }
+      } catch (err) { errEl.textContent = err.message || 'Error al crear la categoría'; }
     });
 
     overlay.querySelector('#cats-lista').addEventListener('click', async (e) => {

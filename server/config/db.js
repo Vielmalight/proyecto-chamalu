@@ -309,6 +309,17 @@ export async function initSchema() {
   await migrarCuentasFacturacion();
   // Migración: zonas en las mesas (unicidad por zona + número)
   await migrarMesasZonas();
+  // Migración: marcar productos con precio pendiente
+  await migrarPrecioPendiente();
+}
+
+// Añade el flag precio_pendiente para marcar productos sin precio (regla productos.txt)
+async function migrarPrecioPendiente() {
+  const cols = (await db.prepare("SELECT name FROM pragma_table_info('productos')").all()).map((c) => c.name);
+  if (!cols.includes('precio_pendiente')) {
+    await db.exec('ALTER TABLE productos ADD COLUMN precio_pendiente INTEGER NOT NULL DEFAULT 0');
+    console.log('Migración aplicada: productos.precio_pendiente añadido.');
+  }
 }
 
 // Añade columnas que falten en tablas existentes (bases creadas antes)

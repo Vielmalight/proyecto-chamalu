@@ -37,11 +37,21 @@ router.get('/', async (req, res, next) => {
 // Crear producto (solo propietario)
 router.post('/', requireRole('PROPIETARIO'), async (req, res, next) => {
   try {
-    const { nombre, categoria_id, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida, imagen_base64 } = req.body || {};
+    const { nombre, categoria_id, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida, imagen_base64, precio_pendiente } = req.body || {};
     if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
-    if (!Number.isInteger(precio_venta) || precio_venta <= 0) {
-      return res.status(400).json({ error: 'El precio de venta debe ser un entero positivo' });
+
+    const esPendiente = precio_pendiente === true || precio_pendiente === 1 ? 1 : 0;
+    const pv = Number(precio_venta);
+    if (esPendiente) {
+      if (pv !== 0 && !Number.isInteger(pv)) {
+        return res.status(400).json({ error: 'Precio inválido' });
+      }
+    } else {
+      if (!Number.isInteger(pv) || pv <= 0) {
+        return res.status(400).json({ error: 'El precio de venta debe ser un entero positivo' });
+      }
     }
+
     let imagen_url = null;
     if (imagen_base64) {
       try {
@@ -51,19 +61,20 @@ router.post('/', requireRole('PROPIETARIO'), async (req, res, next) => {
       }
     }
     const info = await db.prepare(
-      `INSERT INTO productos (nombre, categoria_id, imagen_url, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+      `INSERT INTO productos (nombre, categoria_id, imagen_url, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida, precio_pendiente)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
     ).run(
       nombre.trim(),
       categoria_id || null,
       imagen_url,
       Math.max(0, parseInt(precio_compra, 10) || 0),
-      precio_venta,
+      esPendiente ? 0 : pv,
       Math.max(0, parseInt(stock_actual, 10) || 0),
       Math.max(0, parseInt(stock_minimo, 10) || 0),
-      unidad_medida || 'unidad'
+      unidad_medida || 'unidad',
+      esPendiente
     );
-    logAuditoria(req, 'CREAR_PRODUCTO', `${nombre.trim()} (venta: $${precio_venta})`);
+    logAuditoria(req, 'CREAR_PRODUCTO', `${nombre.trim()} (venta: ${esPendiente ? 'PENDIENTE' : '$' + pv})`);
     res.json({ id: info.lastInsertRowid });
   } catch (err) {
     next(err);
@@ -73,11 +84,21 @@ router.post('/', requireRole('PROPIETARIO'), async (req, res, next) => {
 // Editar producto (solo propietario)
 router.put('/:id', requireRole('PROPIETARIO'), async (req, res, next) => {
   try {
-    const { nombre, categoria_id, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida, imagen_base64 } = req.body || {};
+    const { nombre, categoria_id, precio_compra, precio_venta, stock_actual, stock_minimo, unidad_medida, imagen_base64, precio_pendiente } = req.body || {};
     if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es obligatorio' });
-    if (!Number.isInteger(precio_venta) || precio_venta <= 0) {
-      return res.status(400).json({ error: 'El precio de venta debe ser un entero positivo' });
+
+    const esPendiente = precio_pendiente === true || precio_pendiente === 1 ? 1 : 0;
+    const pv = Number(precio_venta);
+    if (esPendiente) {
+      if (pv !== 0 && !Number.isInteger(pv)) {
+        return res.status(400).json({ error: 'Precio inválido' });
+      }
+    } else {
+      if (!Number.isInteger(pv) || pv <= 0) {
+        return res.status(400).json({ error: 'El precio de venta debe ser un entero positivo' });
+      }
     }
+
     let imagen_url;
     if (imagen_base64) {
       try {
@@ -86,18 +107,29 @@ router.put('/:id', requireRole('PROPIETARIO'), async (req, res, next) => {
         return res.status(400).json({ error: err.message });
       }
     }
-    const sql = imagen_url
-      ? `UPDATE productos SET nombre=?, categoria_id=?, imagen_url=?, precio_compra=?, precio_venta=?, stock_actual=?, stock_minimo=?, unidad_medida=? WHERE id=? AND activo=1`
-      : `UPDATE productos SET nombre=?, categoria_id=?, precio_compra=?, precio_venta=?, stock_actual=?, stock_minimo=?, unidad_medida=? WHERE id=? AND activo=1`;
+    const baseSql = imagen_url
+      ? `UPDATE productos SET nombre=?, categoria_id=?, imagen_url=?, precio_compra=?, precio_venta=?, stock_actual=?, stock_minimo=?, unidad_medida=?, precio_pendiente=? WHERE id=? AND activo=1`
+      : `UPDATE productos SET nombre=?, categoria_id=?, precio_compra=?, precio_venta=?, stock_actual=?, stock_minimo=?, unidad_medida=?, precio_pendiente=? WHERE id=? AND activo=1`;
+    const paramsBase = [
+      nombre.trim(),
+      categoria_id || null,
+      Math.max(0, parseInt(precio_compra, 10) || 0),
+      esPendiente ? 0 : pv,
+      Math.max(0, parseInt(stock_actual, 10) || 0),
+      Math.max(0, parseInt(stock_minimo, 10) || 0),
+      unidad_medida || 'unidad',
+      esPendiente
+    ];
+    const sql = imagen_url ? `UPDATE productos SET nombre=?, categoria_id=?, imagen_url=?, precio_compra=?, precio_venta=?, stock_actual=?, stock_minimo=?, unidad_medida=?, precio_pendiente=? WHERE id=? AND activo=1` : baseSql;
     const params = imagen_url
-      ? [nombre.trim(), categoria_id || null, imagen_url, Math.max(0, parseInt(precio_compra, 10) || 0), precio_venta, Math.max(0, parseInt(stock_actual, 10) || 0), Math.max(0, parseInt(stock_minimo, 10) || 0), unidad_medida || 'unidad', req.params.id]
-      : [nombre.trim(), categoria_id || null, Math.max(0, parseInt(precio_compra, 10) || 0), precio_venta, Math.max(0, parseInt(stock_actual, 10) || 0), Math.max(0, parseInt(stock_minimo, 10) || 0), unidad_medida || 'unidad', req.params.id];
+      ? [nombre.trim(), categoria_id || null, imagen_url, Math.max(0, parseInt(precio_compra, 10) || 0), esPendiente ? 0 : pv, Math.max(0, parseInt(stock_actual, 10) || 0), Math.max(0, parseInt(stock_minimo, 10) || 0), unidad_medida || 'unidad', esPendiente, req.params.id]
+      : [nombre.trim(), categoria_id || null, Math.max(0, parseInt(precio_compra, 10) || 0), esPendiente ? 0 : pv, Math.max(0, parseInt(stock_actual, 10) || 0), Math.max(0, parseInt(stock_minimo, 10) || 0), unidad_medida || 'unidad', esPendiente, req.params.id];
     const anterior = await db.prepare('SELECT nombre, precio_venta FROM productos WHERE id = ? AND activo = 1').get(req.params.id);
     const info = await db.prepare(sql).run(...params);
     if (info.changes === 0) return res.status(404).json({ error: 'Producto no encontrado' });
-    const cambioPrecio = anterior && anterior.precio_venta !== precio_venta
-      ? ` | precio venta: $${anterior.precio_venta} -> $${precio_venta}`
-      : '';
+    const cambioPrecio = anterior && !esPendiente && anterior.precio_venta !== pv
+      ? ` | precio venta: $${anterior.precio_venta} -> $${pv}`
+      : (esPendiente ? ' | marcado como precio pendiente' : '');
     logAuditoria(req, 'EDITAR_PRODUCTO', `${nombre.trim()}${cambioPrecio}`);
     res.json({ ok: true });
   } catch (err) {
