@@ -11,17 +11,20 @@ const MIGRATIONS_DIR = path.join(__dirname, '../../migrations');
  * Solo usa CREATE TABLE IF NOT EXISTS, ALTER TABLE
  * Nunca DROP, DELETE sobre datos
  */
-export function ejecutarMigraciones(db) {
+export async function ejecutarMigraciones(db) {
   // Asegurar tabla de control
   const sqlControl = fs.readFileSync(path.join(MIGRATIONS_DIR, '000_migrations_aplicadas.sql'), 'utf8');
-  db.exec(sqlControl);
+  await db.exec(sqlControl);
   
   // Obtener migraciones ya aplicadas
   const aplicadas = new Set();
   try {
-    const rows = db.prepare('SELECT nombre FROM migrations_aplicadas').all();
-    for (const row of rows) {
-      aplicadas.add(row.nombre);
+    const stmt = db.prepare('SELECT nombre FROM migrations_aplicadas');
+    const rows = await stmt.all();
+    if (Array.isArray(rows)) {
+      for (const row of rows) {
+        aplicadas.add(row.nombre);
+      }
     }
   } catch (e) {
     // Si falla, intentar crearla
@@ -40,8 +43,8 @@ export function ejecutarMigraciones(db) {
     
     // Ejecutar migración
     try {
-      db.exec(sql);
-      db.prepare('INSERT INTO migrations_aplicadas (nombre) VALUES (?)').run(archivo);
+      await db.exec(sql);
+      await db.prepare('INSERT INTO migrations_aplicadas (nombre) VALUES (?)').run(archivo);
       console.log(`[migraciones] Aplicada: ${archivo}`);
     } catch (e) {
       console.error(`[migraciones] ERROR al aplicar ${archivo}:`, e.message);

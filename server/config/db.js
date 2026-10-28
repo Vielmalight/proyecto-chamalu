@@ -134,11 +134,10 @@ async function crearModoRemoto() {
 export const db = process.env.TURSO_URL ? await crearModoRemoto() : crearModoLocal();
 
 // Ejecutar migraciones numeradas antes de initSchema
-if (db.modo === 'local') {
-  ejecutarMigraciones(db);
-} else {
-  // En modo remoto también ejecutar migraciones
-  ejecutarMigraciones(db);
+try {
+  await ejecutarMigraciones(db);
+} catch (e) {
+  console.error('Error ejecutando migraciones:', e.message);
 }
 
 export async function initSchema() {
