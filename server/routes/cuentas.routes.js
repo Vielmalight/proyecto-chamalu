@@ -301,13 +301,10 @@ router.delete('/:id', async (req, res, next) => {
   }
 });
 
-// Cobrar la cuenta (venta atómica). El stock ya se descontó al agregar los items.
+// Cobrar la cuenta (venta atómica). Soporta pago combinado.
 router.post('/:id/cobrar', async (req, res, next) => {
   try {
-    const { metodo_pago, pago_con, descuento, propina } = req.body || {};
-    if (!METODOS_VALIDOS.includes(metodo_pago)) {
-      return res.status(400).json({ error: 'Método de pago no válido' });
-    }
+    const { pagos, metodo_pago, pago_con, descuento, propina } = req.body || {};
     const desc = Number.isInteger(descuento) ? descuento : 0;
     const prop = Number.isInteger(propina) ? propina : 0;
     if (desc < 0) return res.status(400).json({ error: 'Descuento inválido' });
@@ -325,30 +322,67 @@ router.post('/:id/cobrar', async (req, res, next) => {
     }
     // El descuento baja lo que recibe el bar; la propina se cobra aparte (no es ingreso del bar)
     const total = subtotal - desc;
+    const aPagar = total + prop;
 
-    let cambio = 0;
-    if (metodo_pago === 'EFECTIVO') {
-      const aPagar = total + prop;
-      if (!Number.isInteger(pago_con) || pago_con < aPagar) {
-        return res.status(400).json({ error: 'Monto recibido insuficiente' });
+    // Normalizar pagos (compatibilidad con formato antiguo)
+    let listaPagos = [];
+    if (Array.isArray(pagos) && pagos.length > 0) {
+      for (const p of pagos) {
+        if (!METODOS_VALIDOS.includes(p.metodo_pago)) return res.status(400).json({ error: 'Método de pago no válido' });
+        const m = Number(p.monto) || 0;
+        if (m <= 0) return res.status(400).json({ error: 'Monto de pago inválido' });
+        listaPagos.push({ metodo_pago: p.metodo_pago, monto: m });
       }
-      cambio = pago_con - aPagar;
+    } else if (metodo_pago) {
+      if (!METODOS_VALIDOS.includes(metodo_pago)) return res.status(400).json({ error: 'Método de pago no válido' });
+      let montoPago = aPagar;
+      if (metodo_pago === 'EFECTIVO') {
+        montoPago = Number.isInteger(pago_con) ? pago_con : aPagar;
+      }
+      listaPagos.push({ metodo_pago, monto: montoPago });
+    } else {
+      return res.status(400).json({ error: 'Debe agregar al menos un pago' });
+    }
+
+    const sumPagos = listaPagos.reduce((s, p) => s + p.monto, 0);
+    if (sumPagos < aPagar) return res.status(400).json({ error: 'La suma de pagos es menor al total a pagar' });
+    if (sumPagos > aPagar) {
+      // Solo permitir si es por exceso en efectivo
+      const soloEfectivo = listaPagos.length === 1 && listaPagos[0].metodo_pago === 'EFECTIVO';
+      if (!soloEfectivo) return res.status(400).json({ error: 'La suma de pagos supera el total a pagar' });
+    }
+
+    // Verificar efectivo si hay pagos en efectivo
+    const pagosEfectivo = listaPagos.filter(p => p.metodo_pago === 'EFECTIVO').reduce((s, p) => s + p.monto, 0);
+    let cambio = 0;
+    if (pagosEfectivo > 0) {
+      const otros = sumPagos - pagosEfectivo;
+      const aCubrirConEfectivo = Math.max(0, aPagar - otros);
+      cambio = pagosEfectivo - aCubrirConEfectivo;
+      if (cambio < 0) cambio = 0;
     }
 
     let ventaId;
+    const metodoPrincipal = listaPagos[0].metodo_pago;
     await db.transaccion(async (tx) => {
       const venta = await tx.prepare(
         'INSERT INTO ventas (cuenta_id, usuario_id, total, metodo_pago, pago_con, cambio, descuento, propina, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(cuenta.id, req.usuario.id, total, metodo_pago, pago_con || null, cambio, desc, prop, nowCO());
+      ).run(cuenta.id, req.usuario.id, total, metodoPrincipal, pagosEfectivo || null, cambio, desc, prop, nowCO());
       ventaId = venta.lastInsertRowid;
+
+      // Guardar todos los pagos
+      for (const p of listaPagos) {
+        await tx.prepare('INSERT INTO pagos_venta (venta_id, metodo_pago, monto) VALUES (?, ?, ?)')
+          .run(ventaId, p.metodo_pago, p.monto);
+      }
 
       await tx.prepare("UPDATE cuentas_mesa SET estado = 'CERRADA', cierre_en = ? WHERE id = ?").run(nowCO(), cuenta.id);
       if (cuenta.mesa_id) {
         await tx.prepare("UPDATE mesas SET estado = 'LIBRE', nombre_cliente = NULL WHERE id = ?").run(cuenta.mesa_id);
       }
     }, { inmediata: true });
-    logAuditoria(req, 'VENTA', `Venta #${ventaId} - $${total} (${metodo_pago})${desc ? ` - descuento $${desc}` : ''}${prop ? ` - propina $${prop}` : ''}`);
-    res.json({ venta_id: ventaId, subtotal, descuento: desc, propina: prop, total, cambio });
+    logAuditoria(req, 'VENTA', `Venta #${ventaId} - $${total} (pagos combinados)${desc ? ` - descuento $${desc}` : ''}${prop ? ` - propina $${prop}` : ''}`);
+    res.json({ venta_id: ventaId, subtotal, descuento: desc, propina: prop, total, cambio, pagos: listaPagos });
   } catch (err) {
     manejarError(res, err, 'Error al procesar el cobro');
   }
@@ -357,7 +391,7 @@ router.post('/:id/cobrar', async (req, res, next) => {
 // Venta rápida: cobra de una vez, sin abrir cuenta manualmente (para compras de mostrador)
 router.post('/rapida', async (req, res, next) => {
   try {
-    const { items, metodo_pago, pago_con, descuento, propina, cliente } = req.body || {};
+    const { items, pagos, metodo_pago, pago_con, descuento, propina, cliente } = req.body || {};
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ error: 'Agrega al menos un producto' });
     }
@@ -365,9 +399,6 @@ router.post('/rapida', async (req, res, next) => {
       if (!Number.isInteger(it.producto_id) || !Number.isInteger(it.cantidad) || it.cantidad <= 0) {
         return res.status(400).json({ error: 'Datos de producto inválidos' });
       }
-    }
-    if (!METODOS_VALIDOS.includes(metodo_pago)) {
-      return res.status(400).json({ error: 'Método de pago no válido' });
     }
     const desc = Number.isInteger(descuento) ? descuento : 0;
     const prop = Number.isInteger(propina) ? propina : 0;
@@ -396,25 +427,56 @@ router.post('/rapida', async (req, res, next) => {
 
       if (desc > subtotal) throw errorNegocio(400, 'El descuento no puede superar el subtotal');
       const total = subtotal - desc;
+      const aPagar = total + prop;
 
-      let cambio = 0;
-      if (metodo_pago === 'EFECTIVO') {
-        const aPagar = total + prop;
-        if (!Number.isInteger(pago_con) || pago_con < aPagar) {
-          throw errorNegocio(400, 'Monto recibido insuficiente');
+      // Pagos
+      let listaPagos = [];
+      if (Array.isArray(pagos) && pagos.length > 0) {
+        for (const p of pagos) {
+          if (!METODOS_VALIDOS.includes(p.metodo_pago)) throw errorNegocio(400, 'Método de pago no válido');
+          const m = Number(p.monto) || 0;
+          if (m <= 0) throw errorNegocio(400, 'Monto de pago inválido');
+          listaPagos.push({ metodo_pago: p.metodo_pago, monto: m });
         }
-        cambio = pago_con - aPagar;
+      } else if (metodo_pago) {
+        if (!METODOS_VALIDOS.includes(metodo_pago)) throw errorNegocio(400, 'Método de pago no válido');
+        const montoPago = metodo_pago === 'EFECTIVO' && Number.isInteger(pago_con) ? pago_con : aPagar;
+        listaPagos.push({ metodo_pago, monto: montoPago });
+      } else {
+        throw errorNegocio(400, 'Debe agregar al menos un pago');
       }
 
+      const sumPagos = listaPagos.reduce((s, p) => s + p.monto, 0);
+      if (sumPagos < aPagar) throw errorNegocio(400, 'La suma de pagos es menor al total a pagar');
+      if (sumPagos > aPagar) {
+        const soloEfectivo = listaPagos.length === 1 && listaPagos[0].metodo_pago === 'EFECTIVO';
+        if (!soloEfectivo) throw errorNegocio(400, 'La suma de pagos supera el total a pagar');
+      }
+
+      const pagosEfectivo = listaPagos.filter(p => p.metodo_pago === 'EFECTIVO').reduce((s, p) => s + p.monto, 0);
+      let cambio = 0;
+      if (pagosEfectivo > 0) {
+        const otros = sumPagos - pagosEfectivo;
+        const aCubrirConEfectivo = Math.max(0, aPagar - otros);
+        cambio = pagosEfectivo - aCubrirConEfectivo;
+        if (cambio < 0) cambio = 0;
+      }
+
+      const metodoPrincipal = listaPagos[0].metodo_pago;
       const venta = await tx.prepare(
         'INSERT INTO ventas (cuenta_id, usuario_id, total, metodo_pago, pago_con, cambio, descuento, propina, fecha) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)'
-      ).run(cuenta.lastInsertRowid, req.usuario.id, total, metodo_pago, pago_con || null, cambio, desc, prop, nowCO());
+      ).run(cuenta.lastInsertRowid, req.usuario.id, total, metodoPrincipal, pagosEfectivo || null, cambio, desc, prop, nowCO());
+
+      for (const p of listaPagos) {
+        await tx.prepare('INSERT INTO pagos_venta (venta_id, metodo_pago, monto) VALUES (?, ?, ?)')
+          .run(venta.lastInsertRowid, p.metodo_pago, p.monto);
+      }
 
       await tx.prepare("UPDATE cuentas_mesa SET estado = 'CERRADA', cierre_en = ? WHERE id = ?").run(nowCO(), cuenta.lastInsertRowid);
-      resultado = { venta_id: venta.lastInsertRowid, subtotal, descuento: desc, propina: prop, total, cambio };
+      resultado = { venta_id: venta.lastInsertRowid, subtotal, descuento: desc, propina: prop, total, cambio, pagos: listaPagos };
     }, { inmediata: true });
 
-    logAuditoria(req, 'VENTA_RAPIDA', `Venta #${resultado.venta_id} - $${resultado.total} (${metodo_pago})`);
+    logAuditoria(req, 'VENTA_RAPIDA', `Venta #${resultado.venta_id} - $${resultado.total} (pagos combinados)`);
     res.json(resultado);
   } catch (err) {
     manejarError(res, err, 'Error al procesar la venta rápida');

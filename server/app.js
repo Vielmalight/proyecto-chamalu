@@ -22,6 +22,7 @@ import usuariosRoutes from './routes/usuarios.routes.js';
 import configuracionRoutes from './routes/configuracion.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
+import inversionesRoutes from './routes/inversiones.routes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -120,6 +121,7 @@ app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/configuracion', configuracionRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reportesRoutes);
+app.use('/api/inversiones', inversionesRoutes);
 
 // Al arrancar: generar alertas y limpiar sesiones (también corre en cada
 // arranque en frío de Vercel)

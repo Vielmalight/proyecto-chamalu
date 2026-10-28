@@ -94,12 +94,26 @@ router.get('/resumen', async (req, res, next) => {
     if (!turno) return res.json({ turno: null });
 
     const porMetodo = await db.prepare(
-      "SELECT metodo_pago, COALESCE(SUM(total), 0) AS total, COUNT(*) AS cantidad FROM ventas WHERE estado = 'PAGADA' AND fecha >= ? GROUP BY metodo_pago"
+      `SELECT p.metodo_pago, COALESCE(SUM(p.monto), 0) AS total, COUNT(DISTINCT p.venta_id) AS cantidad 
+       FROM pagos_venta p 
+       JOIN ventas v ON v.id = p.venta_id 
+       WHERE v.estado = 'PAGADA' AND v.fecha >= ? 
+       GROUP BY p.metodo_pago`
     ).all(turno.fecha_apertura);
 
-    const ventas_total = porMetodo.reduce((s, m) => s + m.total, 0);
-    const ventas_cantidad = porMetodo.reduce((s, m) => s + m.cantidad, 0);
-    const ventas_efectivo = porMetodo.find((m) => m.metodo_pago === 'EFECTIVO')?.total || 0;
+    const ventas_total = (await db.prepare(
+      "SELECT COALESCE(SUM(total), 0) AS total FROM ventas WHERE estado = 'PAGADA' AND fecha >= ?"
+    ).get(turno.fecha_apertura)).total;
+    const ventas_cantidad = (await db.prepare(
+      "SELECT COUNT(*) AS cantidad FROM ventas WHERE estado = 'PAGADA' AND fecha >= ?"
+    ).get(turno.fecha_apertura)).cantidad;
+    let ventas_efectivo = (await db.prepare(
+      `SELECT COALESCE(SUM(p.monto), 0) AS total 
+       FROM pagos_venta p 
+       JOIN ventas v ON v.id = p.venta_id 
+       WHERE v.estado = 'PAGADA' AND p.metodo_pago = 'EFECTIVO' AND v.fecha >= ?`
+    ).get(turno.fecha_apertura)).total;
+    if (ventas_efectivo > ventas_total) ventas_efectivo = ventas_total;
     const propinas = (await db.prepare(
       "SELECT COALESCE(SUM(propina), 0) AS t FROM ventas WHERE estado = 'PAGADA' AND fecha >= ?"
     ).get(turno.fecha_apertura)).t;
@@ -141,12 +155,16 @@ router.post('/cierre', async (req, res, next) => {
     if (!turno) return res.status(404).json({ error: 'No hay un turno de caja abierto' });
 
     // Solo el efectivo entra a la caja física del bar (el resto va por datáfono/transferencia)
-    const ventasEfectivo = (await db.prepare(
-      "SELECT COALESCE(SUM(total), 0) AS total FROM ventas WHERE estado = 'PAGADA' AND metodo_pago = 'EFECTIVO' AND fecha >= ?"
-    ).get(turno.fecha_apertura)).total;
     const ventasTotal = (await db.prepare(
       "SELECT COALESCE(SUM(total), 0) AS total FROM ventas WHERE estado = 'PAGADA' AND fecha >= ?"
     ).get(turno.fecha_apertura)).total;
+    let ventasEfectivo = (await db.prepare(
+      `SELECT COALESCE(SUM(p.monto), 0) AS total 
+       FROM pagos_venta p 
+       JOIN ventas v ON v.id = p.venta_id 
+       WHERE v.estado = 'PAGADA' AND p.metodo_pago = 'EFECTIVO' AND v.fecha >= ?`
+    ).get(turno.fecha_apertura)).total;
+    if (ventasEfectivo > ventasTotal) ventasEfectivo = ventasTotal;
     const propinas = (await db.prepare(
       "SELECT COALESCE(SUM(propina), 0) AS total FROM ventas WHERE estado = 'PAGADA' AND fecha >= ?"
     ).get(turno.fecha_apertura)).total;

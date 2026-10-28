@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { toast, escapeHtml } from '../ui.js';
+import { toast, escapeHtml, aplicarFormatoMiles, limpiarMiles } from '../ui.js';
 
 const NOMBRE_METODO = {
   EFECTIVO: 'Efectivo',
@@ -212,7 +212,7 @@ function modalCierre() {
         <span id="cierre-esperado">…</span>
       </div>
       <label>Monto declarado (efectivo contado)</label>
-      <input type="number" id="cierre-monto" min="0" step="1000" value="0">
+      <input type="text" inputmode="numeric" id="cierre-monto" placeholder="0">
       <div class="error-msg" id="cierre-error"></div>
       <div class="modal-acciones">
         <button class="btn btn-ghost" id="cierre-cancelar">Cancelar</button>
@@ -221,6 +221,9 @@ function modalCierre() {
     </div>
   `;
   document.body.appendChild(overlay);
+  
+  const cierreMonto = overlay.querySelector('#cierre-monto');
+  aplicarFormatoMiles(cierreMonto);
 
   api('/api/caja/resumen').then((datos) => {
     const el = overlay.querySelector('#cierre-esperado');
@@ -229,7 +232,7 @@ function modalCierre() {
 
   overlay.querySelector('#cierre-cancelar').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#cierre-confirmar').addEventListener('click', async () => {
-    const monto = parseInt(overlay.querySelector('#cierre-monto').value, 10) || 0;
+    const monto = limpiarMiles(overlay.querySelector('#cierre-monto').value);
     const errEl = overlay.querySelector('#cierre-error');
     errEl.textContent = '';
     try {
@@ -256,9 +259,9 @@ function modalEditarApertura() {
       <h2>Editar apertura de caja</h2>
       <p>Solo el propietario puede cambiar estos montos.</p>
       <label>Caja mayor (apertura)</label>
-      <input type="number" id="ea-mayor" min="0" step="1000" value="0">
+      <input type="text" inputmode="numeric" id="ea-mayor" placeholder="0">
       <label>Caja chica (base)</label>
-      <input type="number" id="ea-chica" min="0" step="1000" value="0">
+      <input type="text" inputmode="numeric" id="ea-chica" placeholder="0">
       <div class="error-msg" id="ea-error"></div>
       <div class="modal-acciones">
         <button class="btn btn-ghost" id="ea-cancelar">Cancelar</button>
@@ -267,19 +270,23 @@ function modalEditarApertura() {
     </div>
   `;
   document.body.appendChild(overlay);
+  const eaMayor = overlay.querySelector('#ea-mayor');
+  const eaChica = overlay.querySelector('#ea-chica');
+  aplicarFormatoMiles(eaMayor);
+  aplicarFormatoMiles(eaChica);
 
   // Precargar los montos actuales
   api('/api/caja/resumen').then((datos) => {
     if (datos.turno) {
-      overlay.querySelector('#ea-mayor').value = datos.turno.monto_apertura;
-      overlay.querySelector('#ea-chica').value = datos.turno.monto_caja_chica;
+      eaMayor.value = (datos.turno.monto_apertura || 0).toLocaleString('es-CO');
+      eaChica.value = (datos.turno.monto_caja_chica || 0).toLocaleString('es-CO');
     }
   }).catch(() => {});
 
   overlay.querySelector('#ea-cancelar').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#ea-guardar').addEventListener('click', async () => {
-    const monto_apertura = parseInt(overlay.querySelector('#ea-mayor').value, 10) || 0;
-    const monto_caja_chica = parseInt(overlay.querySelector('#ea-chica').value, 10) || 0;
+    const monto_apertura = limpiarMiles(eaMayor.value);
+    const monto_caja_chica = limpiarMiles(eaChica.value);
     const errEl = overlay.querySelector('#ea-error');
     errEl.textContent = '';
     try {
@@ -304,7 +311,7 @@ function modalCajaChica(tipo) {
     <div class="modal">
       <h2>${esEntrada ? 'Entrada' : 'Salida'} caja chica</h2>
       <label>Monto</label>
-      <input type="number" id="cc-monto" min="1" step="1000" value="0">
+      <input type="text" inputmode="numeric" id="cc-monto" placeholder="0">
       <label>Descripción</label>
       <input type="text" id="cc-descripcion" placeholder="${esEntrada ? 'Ej: Devolución de cambio' : 'Ej: Compra de hielo'}">
       <div class="error-msg" id="cc-error"></div>
@@ -315,10 +322,12 @@ function modalCajaChica(tipo) {
     </div>
   `;
   document.body.appendChild(overlay);
+  const ccMonto = overlay.querySelector('#cc-monto');
+  aplicarFormatoMiles(ccMonto);
 
   overlay.querySelector('#cc-cancelar').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#cc-guardar').addEventListener('click', async () => {
-    const monto = parseInt(overlay.querySelector('#cc-monto').value, 10) || 0;
+    const monto = limpiarMiles(overlay.querySelector('#cc-monto').value);
     const descripcion = overlay.querySelector('#cc-descripcion').value.trim();
     const errEl = overlay.querySelector('#cc-error');
     if (!Number.isInteger(monto) || monto <= 0) { errEl.textContent = 'Monto inválido'; return; }
@@ -347,7 +356,7 @@ function modalGasto() {
       <label>Descripción</label>
       <input type="text" id="gasto-descripcion" placeholder="Ej: Arriendo, servicios...">
       <label>Monto</label>
-      <input type="number" id="gasto-monto" min="1" step="1000" value="0">
+      <input type="text" inputmode="numeric" id="gasto-monto" placeholder="0">
       <label>Categoría</label>
       <input type="text" id="gasto-categoria" placeholder="Ej: Arriendo, Servicios, Nómina...">
       <div class="error-msg" id="gasto-error"></div>
@@ -358,11 +367,13 @@ function modalGasto() {
     </div>
   `;
   document.body.appendChild(overlay);
+  const gastoMonto = overlay.querySelector('#gasto-monto');
+  aplicarFormatoMiles(gastoMonto);
 
   overlay.querySelector('#gasto-cancelar').addEventListener('click', () => overlay.remove());
   overlay.querySelector('#gasto-guardar').addEventListener('click', async () => {
     const descripcion = overlay.querySelector('#gasto-descripcion').value.trim();
-    const monto = parseInt(overlay.querySelector('#gasto-monto').value, 10) || 0;
+    const monto = limpiarMiles(overlay.querySelector('#gasto-monto').value);
     const categoria = overlay.querySelector('#gasto-categoria').value.trim();
     const errEl = overlay.querySelector('#gasto-error');
     if (!descripcion) { errEl.textContent = 'Descripción obligatoria'; return; }

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { DatabaseSync } from 'node:sqlite';
 import bcrypt from 'bcryptjs';
 import { nowCO } from './constants.js';
+import { ejecutarMigraciones } from './migraciones.js';
 
 // ---------------------------------------------------------------------------
 // Adaptador dual de base de datos:
@@ -16,8 +17,9 @@ import { nowCO } from './constants.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, '..', '..', 'data');
-// Permite usar otra base de datos (por ejemplo, en las pruebas automáticas)
-const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, 'chamalu.db');
+const isProd = process.env.NODE_ENV === 'production' || !!process.env.VERCEL;
+// Por defecto: data/dev.db en desarrollo, data/chamalu.db en producción
+const DB_PATH = process.env.DB_PATH || path.join(DATA_DIR, isProd ? 'chamalu.db' : 'dev.db');
 
 // Convierte una fila remota en un objeto plano (igual que node:sqlite devuelve)
 function filaPlana(fila) {
@@ -130,6 +132,14 @@ async function crearModoRemoto() {
 }
 
 export const db = process.env.TURSO_URL ? await crearModoRemoto() : crearModoLocal();
+
+// Ejecutar migraciones numeradas antes de initSchema
+if (db.modo === 'local') {
+  ejecutarMigraciones(db);
+} else {
+  // En modo remoto también ejecutar migraciones
+  ejecutarMigraciones(db);
+}
 
 export async function initSchema() {
   await db.exec(`

@@ -5,3 +5,5 @@ data/backups/
 .env
 public/uploads/*
 !public/uploads/.gitkeep
+
+.vercel

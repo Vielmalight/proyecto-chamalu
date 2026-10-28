@@ -1,6 +1,6 @@
 import { api } from '../api.js';
 import { state } from '../state.js';
-import { toast, escapeHtml } from '../ui.js';
+import { toast, escapeHtml, aplicarFormatoMiles, limpiarMiles } from '../ui.js';
 import { abrirRecortador } from './recortador.js';
 
 const pesos = (n) => `$${(n || 0).toLocaleString('es-CO')}`;
@@ -122,8 +122,8 @@ export async function renderGestion(container) {
         <div class="form-grid">
           <div><label>Nombre *</label><input type="text" id="prod-nombre" value="${escapeHtml(datos.nombre || '')}"></div>
           <div><label>Categoría</label><select id="prod-categoria"><option value="">Sin categoría</option></select></div>
-          <div><label>Precio de venta ${datos.precio_pendiente ? '(pendiente)' : '*'}</label><input type="number" id="prod-precio-venta" value="${datos.precio_pendiente ? 0 : (datos.precio_venta || '')}" min="0" step="100"></div>
-          <div><label>Precio de compra</label><input type="number" id="prod-precio-compra" value="${datos.precio_compra || 0}" min="0" step="100"></div>
+          <div><label>Precio de venta ${datos.precio_pendiente ? '(pendiente)' : '*'}</label><input type="text" inputmode="numeric" id="prod-precio-venta" placeholder="0" value="${datos.precio_pendiente ? '' : (datos.precio_venta ? Number(datos.precio_venta).toLocaleString('es-CO') : '')}"></div>
+          <div><label>Precio de compra</label><input type="text" inputmode="numeric" id="prod-precio-compra" placeholder="0" value="${datos.precio_compra ? Number(datos.precio_compra).toLocaleString('es-CO') : ''}"></div>
           <div><label>Stock actual</label><input type="number" id="prod-stock" value="${datos.stock_actual ?? 0}" min="0"></div>
           <div><label>Stock mínimo</label><input type="number" id="prod-stock-min" value="${datos.stock_minimo ?? 0}" min="0"></div>
           <div><label>Unidad de medida</label><input type="text" id="prod-unidad" value="${escapeHtml(datos.unidad_medida || 'unidad')}"></div>
@@ -148,6 +148,11 @@ export async function renderGestion(container) {
       </div>
     `;
     document.body.appendChild(overlay);
+    
+    const prodPrecioVenta = overlay.querySelector('#prod-precio-venta');
+    const prodPrecioCompra = overlay.querySelector('#prod-precio-compra');
+    aplicarFormatoMiles(prodPrecioVenta);
+    aplicarFormatoMiles(prodPrecioCompra);
 
     async function cargarCatsEnSelect() {
       try {
@@ -248,15 +253,14 @@ export async function renderGestion(container) {
     overlay.querySelector('#prod-guardar').addEventListener('click', async () => {
       const errEl = overlay.querySelector('#prod-error');
       errEl.textContent = '';
-      const pvRaw = overlay.querySelector('#prod-precio-venta').value;
-      const pv = parseInt(pvRaw, 10);
-      const marcarPendiente = !Number.isInteger(pv) || pv <= 0;
+      const pv = limpiarMiles(prodPrecioVenta.value);
+      const marcarPendiente = pv <= 0;
       const body = {
         nombre: overlay.querySelector('#prod-nombre').value.trim(),
         categoria_id: overlay.querySelector('#prod-categoria').value || null,
         precio_venta: marcarPendiente ? 0 : pv,
         precio_pendiente: marcarPendiente ? 1 : 0,
-        precio_compra: parseInt(overlay.querySelector('#prod-precio-compra').value, 10) || 0,
+        precio_compra: limpiarMiles(prodPrecioCompra.value),
         stock_actual: parseInt(overlay.querySelector('#prod-stock').value, 10) || 0,
         stock_minimo: parseInt(overlay.querySelector('#prod-stock-min').value, 10) || 0,
         unidad_medida: overlay.querySelector('#prod-unidad').value.trim() || 'unidad',

@@ -450,7 +450,41 @@ I. Versionado "MAYOR.MENOR.PARCHE" (crítica nueva, segunda sección): mostrar l
        ¿De acuerdo? (sí / cambio la regla)
    [Recomendado: sí]
    R: si.
-   I4. Versión inicial para esta Fase G: (1. 2.0.0 porque incluye rediseño y
-       funciones nuevas / 2. 1.1.0 / 3. otra)
-   [Recomendado: 1]
-   R: 1.
+I4. Versión inicial para esta Fase G: (1. 2.0.0 porque incluye rediseño y
+        funciones nuevas / 2. 1.1.0 / 3. otra)
+    [Recomendado: 1]
+    R: 1.
+
+Desarrollo: decisiones FASE I (nuevos pedidos de Zaida).
+
+A. Pago combinado: cada venta tendrá varios pagos por venta con método y monto. La pantalla de cobro debe mostrar "pagado" y 
+"falta por pagar" y no dejar cerrar hasta que la suma coincida con el total. El efectivo suma a caja y los demás métodos no. 
+¿Aprobamos este cambio? (sí / no)
+[Recomendado: sí]
+R: si.
+
+B. Inversiones: pestaña nueva visible solo para el propietario. Campos: fecha, descripción, monto y origen del dinero
+(caja o bolsillo). Si es "caja", se registra una salida automática en caja; si es "bolsillo", solo queda el registro. 
+¿Las inversiones son solo gasto, o deben alimentar el inventario (sumar stock)? (solo gasto / también suman stock / otro)
+[Recomendado: solo gasto]
+R: solo gasto.
+
+C. Formato de miles al escribir: en campos de dinero se formatean con puntos (10000 → 10.000) mientras se escribe; 
+al guardar se envía el número limpio. ¿Aprobamos esto? (sí / no)
+[Recomendado: sí]
+R: si. y que en lugares para poner numeros aparezca un numero "0" invisible que no este escrito en el formulario que al momento de poner otro numero o algun digito se quite automaticamente.
+
+D. App de celular y programa de PC: ¿qué prefieres? (1. PWA (instalable, mismo código, cubre celular/PC)
+/ 2. Programa de PC con Electron (.exe) / 3. App nativa para Play Store/APK)
+[Recomendado: PWA]
+R: PWA.
+
+E. Dónde correrá el servidor (para decidir PWA/app): (1. Solo en PC del bar (solo funciona en misma red WiFi) 
+/ 2. Subido a hosting (funciona desde cualquier lugar)
+[Recomendado: depende de uso]
+R: depende de uso. pero que se pueda usar en cualquier lugar.
+
+F. Orden sugerido: 1) formato de miles (C) → 2) pago combinado (A) → 3) inversiones (B) → 4) app/programa (D), 
+cuando se defina servidor. ¿Aprobamos este orden? (sí / no / otro)
+[Recomendado: sí]
+R: si.

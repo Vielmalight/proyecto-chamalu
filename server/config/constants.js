@@ -8,6 +8,7 @@ export const MODULOS = [
   { id: 'ventas', nombre: 'Ventas' },
   { id: 'reportes', nombre: 'Reportes' },
   { id: 'caja', nombre: 'Caja' },
+  { id: 'inversiones', nombre: 'Inversiones' },
   { id: 'alertas', nombre: 'Alertas' },
   { id: 'usuarios', nombre: 'Usuarios' },
   { id: 'configuracion', nombre: 'Configuración' },

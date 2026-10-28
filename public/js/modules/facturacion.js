@@ -1,5 +1,5 @@
 import { api } from '../api.js';
-import { toast, escapeHtml, etiquetaMesa } from '../ui.js';
+import { toast, escapeHtml, etiquetaMesa, aplicarFormatoMiles, limpiarMiles } from '../ui.js';
 
 const pesos = (n) => `$${(n || 0).toLocaleString('es-CO')}`;
 const METODOS = [
@@ -497,63 +497,117 @@ export async function renderFacturacion(container) {
         <h2>Cobrar venta</h2>
         <div class="form-grid">
           <div>
-            <label>Método de pago</label>
-            <select id="cobro-metodo">
-              ${METODOS.map((m) => `<option value="${m.v}">${m.t}</option>`).join('')}
-            </select>
-          </div>
-          <div id="cobro-pago-con-wrap">
-            <label>Recibido (efectivo)</label>
-            <input type="number" id="cobro-pago-con" min="0" step="1000" value="0">
-          </div>
-          <div>
             <label>Descuento ($)</label>
-            <input type="number" id="cobro-descuento" min="0" step="1000" value="0">
+            <input type="text" inputmode="numeric" id="cobro-descuento" placeholder="0">
           </div>
           <div>
             <label>Propina ($, aparte)</label>
-            <input type="number" id="cobro-propina" min="0" step="1000" value="0">
+            <input type="text" inputmode="numeric" id="cobro-propina" placeholder="0">
           </div>
+        </div>
+        <div class="pagos-seccion">
+          <div class="pagos-header">
+            <span>Pagos</span>
+            <button class="btn btn-ghost btn-sm" id="cobro-agregar-pago">+ Agregar pago</button>
+          </div>
+          <div id="cobro-pagos-lista" class="pagos-lista"></div>
         </div>
         <div class="resumen-cobro">
           <div><span>Subtotal</span><span id="cobro-subtotal">$0</span></div>
           <div><span>Descuento</span><span id="cobro-desc">-$0</span></div>
           <div><span>Propina</span><span id="cobro-prop">+$0</span></div>
-          <div class="total-pagar"><span>A pagar</span><span id="cobro-total">$0</span></div>
-          <div id="cobro-cambio-linea" class="linea-cambio"><span>Cambio</span><span id="cobro-cambio">$0</span></div>
+          <div class="total-pagar"><span>Total a pagar</span><span id="cobro-total">$0</span></div>
+          <div><span>Pagado</span><span id="cobro-pagado">$0</span></div>
+          <div><span>Falta por pagar</span><span id="cobro-falta">$0</span></div>
+          <div id="cobro-cambio-linea" class="linea-cambio"><span>Cambio (efectivo)</span><span id="cobro-cambio">$0</span></div>
         </div>
         <div class="error-msg" id="cobro-error"></div>
         <div class="modal-acciones">
           <button class="btn btn-ghost" id="cobro-cancelar">Cancelar</button>
-          <button class="btn btn-primary" id="cobro-confirmar">Confirmar cobro</button>
+          <button class="btn btn-primary" id="cobro-confirmar" disabled>Confirmar cobro</button>
         </div>
       </div>
     `;
     document.body.appendChild(overlay);
 
-    const metodoEl = overlay.querySelector('#cobro-metodo');
-    const pagoConEl = overlay.querySelector('#cobro-pago-con');
     const descEl = overlay.querySelector('#cobro-descuento');
     const propEl = overlay.querySelector('#cobro-propina');
+    const pagosLista = overlay.querySelector('#cobro-pagos-lista');
+    const btnAgregar = overlay.querySelector('#cobro-agregar-pago');
+    const btnConfirmar = overlay.querySelector('#cobro-confirmar');
+    
+    // Aplicar formato de miles
+    aplicarFormatoMiles(descEl);
+    aplicarFormatoMiles(propEl);
+
+    let pagos = [];
+    function agregarPago() {
+      const idx = pagos.length;
+      pagos.push({ metodo_pago: 'EFECTIVO', monto: 0 });
+      const fila = document.createElement('div');
+      fila.className = 'pago-fila';
+      fila.innerHTML = `
+        <select class="pago-metodo">
+          ${METODOS.map((m) => `<option value="${m.v}">${m.t}</option>`).join('')}
+        </select>
+        <input type="text" inputmode="numeric" class="pago-monto" placeholder="0">
+        <button class="btn btn-ghost btn-sm text-danger pago-quitar">Quitar</button>
+      `;
+      pagosLista.appendChild(fila);
+      const sel = fila.querySelector('.pago-metodo');
+      const inp = fila.querySelector('.pago-monto');
+      aplicarFormatoMiles(inp);
+      sel.value = pagos[idx].metodo_pago;
+      sel.addEventListener('change', () => { pagos[idx].metodo_pago = sel.value; recalcular(); });
+      inp.addEventListener('input', () => { pagos[idx].monto = limpiarMiles(inp.value); recalcular(); });
+      fila.querySelector('.pago-quitar').addEventListener('click', () => {
+        pagos.splice(idx, 1);
+        fila.remove();
+        // Reindexar
+        Array.from(pagosLista.querySelectorAll('.pago-fila')).forEach((f, i) => {
+          const s = f.querySelector('.pago-metodo');
+          const inp2 = f.querySelector('.pago-monto');
+          s.onchange = () => { pagos[i].metodo_pago = s.value; recalcular(); };
+          inp2.oninput = () => { pagos[i].monto = limpiarMiles(inp2.value); recalcular(); };
+          f.querySelector('.pago-quitar').onclick = () => {
+            pagos.splice(i, 1);
+            f.remove();
+            recalcular();
+          };
+        });
+        recalcular();
+      });
+      recalcular();
+    }
+    
+    btnAgregar.addEventListener('click', agregarPago);
+    if (pagos.length === 0) agregarPago();
 
     function recalcular() {
-      const metodo = metodoEl.value;
-      const pagoCon = Math.max(0, parseInt(pagoConEl.value, 10) || 0);
-      const desc = Math.max(0, parseInt(descEl.value, 10) || 0);
-      const prop = Math.max(0, parseInt(propEl.value, 10) || 0);
+      const desc = limpiarMiles(descEl.value);
+      const prop = limpiarMiles(propEl.value);
       const total = Math.max(0, subtotal - desc);
       const aPagar = total + prop;
       overlay.querySelector('#cobro-subtotal').textContent = pesos(subtotal);
       overlay.querySelector('#cobro-desc').textContent = `-${pesos(desc)}`;
       overlay.querySelector('#cobro-prop').textContent = `+${pesos(prop)}`;
       overlay.querySelector('#cobro-total').textContent = pesos(aPagar);
-      const esEfectivo = metodo === 'EFECTIVO';
-      overlay.querySelector('#cobro-pago-con-wrap').classList.toggle('hidden', !esEfectivo);
-      overlay.querySelector('#cobro-cambio-linea').classList.toggle('hidden', !esEfectivo);
-      overlay.querySelector('#cobro-cambio').textContent = pesos(Math.max(0, pagoCon - aPagar));
+      
+      const pagado = pagos.reduce((s, p) => s + (Number(p.monto) || 0), 0);
+      const falta = Math.max(0, aPagar - pagado);
+      overlay.querySelector('#cobro-pagado').textContent = pesos(pagado);
+      overlay.querySelector('#cobro-falta').textContent = pesos(falta);
+      
+      const pagosEfectivo = pagos.filter(p => p.metodo_pago === 'EFECTIVO').reduce((s, p) => s + (Number(p.monto) || 0), 0);
+      const otros = pagado - pagosEfectivo;
+      const aCubrirConEfectivo = Math.max(0, aPagar - otros);
+      const cambio = pagosEfectivo - aCubrirConEfectivo;
+      overlay.querySelector('#cobro-cambio-linea').classList.toggle('hidden', pagosEfectivo <= 0);
+      overlay.querySelector('#cobro-cambio').textContent = pesos(Math.max(0, cambio));
+      
+      btnConfirmar.disabled = !(pagado === aPagar && pagos.length > 0);
     }
-    metodoEl.addEventListener('change', recalcular);
-    pagoConEl.addEventListener('input', recalcular);
+    
     descEl.addEventListener('input', recalcular);
     propEl.addEventListener('input', recalcular);
     recalcular();
@@ -562,13 +616,14 @@ export async function renderFacturacion(container) {
     overlay.querySelector('#cobro-confirmar').addEventListener('click', () => {
       const errEl = overlay.querySelector('#cobro-error');
       errEl.textContent = '';
+      const desc = limpiarMiles(descEl.value);
+      const prop = limpiarMiles(propEl.value);
       confirmarCobro(
         idCuenta,
         {
-          metodo_pago: metodoEl.value,
-          pago_con: parseInt(pagoConEl.value, 10) || 0,
-          descuento: Math.max(0, parseInt(descEl.value, 10) || 0),
-          propina: Math.max(0, parseInt(propEl.value, 10) || 0),
+          pagos: pagos.filter(p => p.monto > 0),
+          descuento: desc,
+          propina: prop,
         },
         () => overlay.remove(),
         errEl

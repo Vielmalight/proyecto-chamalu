@@ -1,11 +1,13 @@
 import { intentarLogin, obtenerSesion, cerrarSesion, abrirCaja, cambiarPassword } from './modules/auth.js';
 import { renderInicio } from './modules/inicio.js';
+import { renderAuth } from './modules/auth.js';
 import { renderFacturacion } from './modules/facturacion.js';
 import { renderGestion } from './modules/gestion.js';
 import { renderMesas } from './modules/mesas.js';
 import { renderVentas } from './modules/ventas.js';
 import { renderReportes } from './modules/reportes.js';
 import { renderCaja } from './modules/caja.js';
+import { renderInversiones } from './modules/inversiones.js';
 import { renderAlertas } from './modules/alertas.js';
 import { renderUsuarios } from './modules/usuarios.js';
 import { renderConfiguracion } from './modules/configuracion.js';
@@ -21,6 +23,7 @@ const modulosRender = {
   ventas: renderVentas,
   reportes: renderReportes,
   caja: renderCaja,
+  inversiones: renderInversiones,
   alertas: renderAlertas,
   usuarios: renderUsuarios,
   configuracion: renderConfiguracion,
@@ -34,6 +37,7 @@ const MODULOS_NOMBRES = {
   ventas: 'Ventas',
   reportes: 'Reportes',
   caja: 'Caja',
+  inversiones: 'Inversiones',
   alertas: 'Alertas',
   usuarios: 'Usuarios',
   configuracion: 'Configuración',
@@ -45,7 +49,7 @@ function aplicarTema() {
 
 // Agrupación del menú lateral (Fase 3)
 const GRUPOS_MENU = [
-  { titulo: 'Operación', modulos: ['inicio', 'facturacion', 'ventas', 'caja'] },
+  { titulo: 'Operación', modulos: ['inicio', 'facturacion', 'ventas', 'caja', 'inversiones'] },
   { titulo: 'Catálogo', modulos: ['gestion'] },
   { titulo: 'Análisis', modulos: ['reportes', 'alertas'] },
   { titulo: 'Sistema', modulos: ['mesas', 'usuarios', 'configuracion'] },

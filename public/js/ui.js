@@ -40,6 +40,49 @@ export function hoyCO() {
   return new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
+// Formatear número con puntos de miles para inputs monetarios
+export function formatearMiles(valor) {
+  const num = String(valor || '').replace(/\D/g, '');
+  if (!num || num === '0') return '';
+  return Number(num).toLocaleString('es-CO');
+}
+
+// Limpiar puntos y convertir a número
+export function limpiarMiles(valor) {
+  const num = String(valor || '').replace(/\D/g, '');
+  return num === '' ? 0 : Number(num);
+}
+
+// Aplicar formato de miles a un input con comportamiento "0 invisible"
+export function aplicarFormatoMiles(input) {
+  if (!input) return;
+  if (!input.placeholder) input.placeholder = '0';
+  
+  const formatear = () => {
+    const valorAntes = input.value;
+    const limpio = valorAntes.replace(/\D/g, '');
+    if (limpio === '' || limpio === '0') {
+      input.value = '';
+      return;
+    }
+    const formateado = Number(limpio).toLocaleString('es-CO');
+    input.value = formateado;
+  };
+  
+  input.addEventListener('input', formatear);
+  input.addEventListener('focus', () => {
+    if (input.value === '') input.placeholder = '';
+  });
+  input.addEventListener('blur', () => {
+    const limpio = (input.value || '').replace(/\D/g, '');
+    if (limpio === '' || limpio === '0') {
+      input.value = '';
+    }
+    if (input.value === '') input.placeholder = '0';
+  });
+}
+}
+
 // Avisa cuando cambia el día (medianoche en Colombia) para refrescar filtros de fecha.
 // Devuelve el intervalo para poder detenerlo si se necesita.
 export function vigilarCambioDeDia(callback) {
