@@ -4,7 +4,7 @@
 - **Fase I completada y publicada como v2.0.1**: pago combinado, inversiones, formato de miles y PWA. El tag `v2.0.1` se movió al commit `39f18c5` tras corregir un `}` sobrante en `public/js/ui.js` (rompía todo el frontend) y el registro del service worker.
 - **Producción en Vercel activa**: `https://chamalu-beer.vercel.app`, con Turso configurado (`TURSO_URL`/`TURSO_TOKEN`). El proyecto tiene **Git conectado**: cualquier push a `main` despliega a producción.
 - **Fase H cerrada sin H4**: el propietario confirmó que `data/chamalu.db` es una base vieja de pruebas (se deja para pruebas y **no se migra**). Producción usa su propia BD en Turso. H1 (BD dual), H2 (Blob) y H3 (runtime) completas.
-- **Trabajo nuevo (pendiente de publicar)**: token CSRF por sesión y **Configuración por pestañas** (Negocio · Mi cuenta · Alertas · Respaldos · App) con botón **"Instalar app"** (PWA).
+- **Trabajo nuevo publicado como v2.1.0**: token CSRF por sesión, **Configuración por pestañas** (Negocio · Mi cuenta · Alertas · Respaldos · App) con botón **"Instalar app"** (PWA) y **service worker red-primero** (las actualizaciones ya llegan a los navegadores con la app instalada). Producción verificada el 2026-10-29.
 - **Fase G completada** (G1 cambios simples, G2 mesas con zonas, G3 recorte de imagen). Decisiones en `decisiones.txt`.
 - Versión de la app: **2.0.1** (`package.json`, única fuente; visible en el pie del menú lateral y en el login).
 - La **Fase 3** quedó cerrada: Fases A (arreglos y pulido), B (rediseño UX), C (Facturación/POS) y D (Inicio/dashboard) completadas.
