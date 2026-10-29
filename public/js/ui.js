@@ -81,7 +81,6 @@ export function aplicarFormatoMiles(input) {
     if (input.value === '') input.placeholder = '0';
   });
 }
-}
 
 // Avisa cuando cambia el día (medianoche en Colombia) para refrescar filtros de fecha.
 // Devuelve el intervalo para poder detenerlo si se necesita.

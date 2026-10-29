@@ -1,6 +1,5 @@
 import { intentarLogin, obtenerSesion, cerrarSesion, abrirCaja, cambiarPassword } from './modules/auth.js';
 import { renderInicio } from './modules/inicio.js';
-import { renderAuth } from './modules/auth.js';
 import { renderFacturacion } from './modules/facturacion.js';
 import { renderGestion } from './modules/gestion.js';
 import { renderMesas } from './modules/mesas.js';
@@ -283,6 +282,12 @@ async function init() {
   } catch {
     mostrar('login-view');
   }
+}
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
 }
 
 init();
