@@ -205,12 +205,15 @@ try {
   const login = await evalExpr(`(async () => {
     const r = await fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ usuario: 'admin', password: 'admin123' }) });
+    const data = await r.json().catch(() => ({}));
+    window.__csrf = data.csrf_token || '';
     return r.status;
   })()`);
   if (login !== 200) throw new Error(`Login fallo (HTTP ${login}).`);
 
   const apertura = await evalExpr(`(async () => {
-    const r = await fetch('/api/caja/apertura', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const r = await fetch('/api/caja/apertura', { method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': window.__csrf },
       body: JSON.stringify({ monto_apertura: 50000, monto_caja_chica: 10000 }) });
     return r.status;
   })()`);

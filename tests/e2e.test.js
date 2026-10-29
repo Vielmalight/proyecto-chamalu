@@ -9,9 +9,16 @@ function cookieDe(res) {
   return sc ? sc.split(';')[0] : '';
 }
 
-async function pedir(path, { method = 'GET', body, cookie, origin } = {}) {
+// Token CSRF por cookie de sesión (el servidor lo entrega en login y /me)
+const csrfPorCookie = new Map();
+
+async function pedir(path, { method = 'GET', body, cookie, origin, csrf } = {}) {
   const headers = { 'Content-Type': 'application/json' };
-  if (cookie) headers.Cookie = cookie;
+  if (cookie) {
+    headers.Cookie = cookie;
+    const token = csrf === undefined ? csrfPorCookie.get(cookie) : csrf;
+    if (token) headers['X-CSRF-Token'] = token;
+  }
   if (origin) headers.Origin = origin;
   const res = await fetch(BASE + path, {
     method,
@@ -20,7 +27,9 @@ async function pedir(path, { method = 'GET', body, cookie, origin } = {}) {
   });
   let data = null;
   try { data = await res.json(); } catch { /* sin cuerpo */ }
-  return { status: res.status, data, cookie: cookieDe(res) };
+  const cookieNueva = cookieDe(res);
+  if (data && data.csrf_token && cookieNueva) csrfPorCookie.set(cookieNueva, data.csrf_token);
+  return { status: res.status, data, cookie: cookieNueva };
 }
 
 test('Flujo completo end-to-end', async (t) => {
@@ -46,6 +55,12 @@ test('Flujo completo end-to-end', async (t) => {
   // 2b) CSRF: un Origin ajeno a los cambios se rechaza
   r = await pedir('/api/mesas', { method: 'POST', cookie: admin, origin: 'http://malicioso.com', body: { numero: 999999 } });
   assert.strictEqual(r.status, 403, 'CSRF: origen ajeno bloqueado');
+
+  // 2c) CSRF: con sesión, un token ausente o inválido se rechaza
+  r = await pedir('/api/mesas', { method: 'POST', cookie: admin, csrf: '', body: { numero: 999998 } });
+  assert.strictEqual(r.status, 403, 'CSRF: token ausente bloqueado');
+  r = await pedir('/api/mesas', { method: 'POST', cookie: admin, csrf: 'x'.repeat(64), body: { numero: 999998 } });
+  assert.strictEqual(r.status, 403, 'CSRF: token inválido bloqueado');
 
   // 3) Apertura de caja (200 si abre, 409 si ya había turno)
   r = await pedir('/api/caja/apertura', { method: 'POST', cookie: admin, body: { monto_apertura: 100000, monto_caja_chica: 50000 } });

@@ -6,6 +6,7 @@ import { nowCO, sumarMinutos, MODULOS_POR_ROL } from '../config/constants.js';
 import { APP_VERSION } from '../config/version.js';
 import { loginLimiter } from '../middlewares/rateLimit.js';
 import { requireAuth } from '../middlewares/auth.js';
+import { tokenCsrf } from '../middlewares/csrf.js';
 import { logAuditoria } from '../middlewares/auditoria.js';
 
 const router = Router();
@@ -23,7 +24,7 @@ function publicUser(u) {
 }
 
 // Datos que el frontend necesita al iniciar sesión
-async function datosSesion(u) {
+async function datosSesion(u, tokenSesion) {
   const modulos = MODULOS_POR_ROL[u.rol] || [];
   const nombre = await db.prepare("SELECT valor FROM configuracion WHERE clave = 'nombre_negocio'").get();
   const logo = await db.prepare("SELECT valor FROM configuracion WHERE clave = 'logo'").get();
@@ -32,6 +33,7 @@ async function datosSesion(u) {
     usuario: publicUser(u),
     modulos,
     version: APP_VERSION,
+    csrf_token: tokenCsrf(tokenSesion),
     config: {
       nombre_negocio: nombre?.valor || 'Chamalú Beer',
       logo: logo?.valor || '',
@@ -80,7 +82,7 @@ router.post('/login', loginLimiter, async (req, res, next) => {
     });
 
     logAuditoria(req, 'LOGIN', `Ingreso: ${u.usuario} (${u.rol})`, u.id);
-    res.json(await datosSesion(u));
+    res.json(await datosSesion(u, token));
   } catch (err) {
     next(err);
   }
@@ -99,7 +101,7 @@ router.post('/logout', async (req, res, next) => {
 
 router.get('/me', requireAuth, async (req, res, next) => {
   try {
-    res.json(await datosSesion(req.usuario));
+    res.json(await datosSesion(req.usuario, req.sesionToken));
   } catch (err) {
     next(err);
   }

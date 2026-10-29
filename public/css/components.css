@@ -765,8 +765,9 @@ a.btn { text-decoration: none; }
 .fact-origen.origen-rapida { background: var(--warning-soft); color: var(--warning); border-color: var(--warning); font-weight: 700; }
 .fact-origen.origen-mesa { background: var(--primary-soft); color: var(--primary); border-color: var(--primary); font-weight: 700; }
 
-/* ----- Barra de pestañas (inferior) ----- */
-.fact-tabs {
+/* ----- Barra de pestañas (inferior y Configuración) ----- */
+.fact-tabs,
+.config-tabs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -777,7 +778,9 @@ a.btn { text-decoration: none; }
   border-radius: var(--radius);
   box-shadow: var(--shadow-sm);
 }
-.fact-tab {
+.config-tabs { margin-bottom: var(--space-4); }
+.fact-tab,
+.config-tab {
   border: 1px solid var(--border-strong);
   background: var(--surface-2);
   color: var(--text-muted);
@@ -788,8 +791,12 @@ a.btn { text-decoration: none; }
   cursor: pointer;
   transition: background var(--transition), border-color var(--transition), color var(--transition);
 }
-.fact-tab:hover { border-color: var(--primary); color: var(--primary); }
-.fact-tab.activa { background: var(--primary); border-color: var(--primary); color: var(--primary-contrast); }
+.fact-tab:hover,
+.config-tab:hover { border-color: var(--primary); color: var(--primary); }
+.fact-tab.activa,
+.config-tab.activa { background: var(--primary); border-color: var(--primary); color: var(--primary-contrast); }
+.config-panel { display: none; }
+.config-panel.activa { display: block; }
 .fact-tab-add {
   border: 1px dashed var(--border-strong);
   background: transparent;

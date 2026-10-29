@@ -19,6 +19,7 @@
 - Cambio de contraseña pidiendo la actual.
 - Nunca desplegar con credenciales por defecto; el admin inicial debe cambiar su contraseña en el primer login.
 - Registrar acciones importantes (login, cambios de precio, borrados).
+- CSRF: se valida el header `Origin` y se exige `X-CSRF-Token` (derivado de la sesión) en POST/PUT/DELETE. El frontend lo envía solo; cualquier cliente nuevo debe incluirlo.
 - Nunca subir a GitHub .env, data/*.db ni la carpeta uploads (deben estar en .gitignore).
 - El proyecto de Vercel tiene Git conectado: **un push a `main` despliega a producción**. Para probar sin publicar, usar una rama aparte.
 

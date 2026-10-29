@@ -3,7 +3,8 @@
 ## Estado actual
 - **Fase I completada y publicada como v2.0.1**: pago combinado, inversiones, formato de miles y PWA. El tag `v2.0.1` se movió al commit `39f18c5` tras corregir un `}` sobrante en `public/js/ui.js` (rompía todo el frontend) y el registro del service worker.
 - **Producción en Vercel activa**: `https://chamalu-beer.vercel.app`, con Turso configurado (`TURSO_URL`/`TURSO_TOKEN`). El proyecto tiene **Git conectado**: cualquier push a `main` despliega a producción.
-- **Pendiente de la Fase H: H4** (migrar los datos reales de `data/chamalu.db` a Turso). H1 (BD dual), H2 (Blob) y H3 (runtime) están completas.
+- **Fase H cerrada sin H4**: el propietario confirmó que `data/chamalu.db` es una base vieja de pruebas (se deja para pruebas y **no se migra**). Producción usa su propia BD en Turso. H1 (BD dual), H2 (Blob) y H3 (runtime) completas.
+- **Trabajo nuevo (pendiente de publicar)**: token CSRF por sesión y **Configuración por pestañas** (Negocio · Mi cuenta · Alertas · Respaldos · App) con botón **"Instalar app"** (PWA).
 - **Fase G completada** (G1 cambios simples, G2 mesas con zonas, G3 recorte de imagen). Decisiones en `decisiones.txt`.
 - Versión de la app: **2.0.1** (`package.json`, única fuente; visible en el pie del menú lateral y en el login).
 - La **Fase 3** quedó cerrada: Fases A (arreglos y pulido), B (rediseño UX), C (Facturación/POS) y D (Inicio/dashboard) completadas.
@@ -141,6 +142,11 @@
   - **Migraciones**: carpeta `/migrations` (`000_migrations_aplicadas.sql`, `001_…`, `002_…`) con registro en la tabla `migrations_aplicadas`; se aplican una sola vez al arrancar (local y Turso).
   - **`release.sh`** corregido: respaldo real con `VACUUM INTO` en `data/backups/`, versión calculada sin la dependencia `semver`, exige árbol limpio y verifica que el tag no exista en local ni en `origin`.
 - Pruebas Fase I: no hay pruebas automatizadas nuevas (decisión del propietario); se validó con `npm test` → integración **25/25** + e2e **1/1** y `npm run test:smoke` → **11/11**, 0 errores (incluye la pestaña Inversiones).
+- Token CSRF por sesión + Configuración por pestañas (aprobado por el propietario):
+  - **CSRF**: `tokenCsrf()` en `server/middlewares/csrf.js` deriva el token de la sesión con **HMAC-SHA256 + `SESSION_SECRET`** (no se guarda en la BD y funciona con varias instancias en Vercel). `verificarTokenCsrf` exige el header `X-CSRF-Token` en POST/PUT/DELETE cuando hay cookie `sid` (login exento; GET/HEAD/OPTIONS no). Login y `/api/auth/me` devuelven `csrf_token`; el frontend lo guarda en `state.csrf_token` y `api.js` lo envía solo.
+  - **Configuración por pestañas** (`public/js/modules/configuracion.js`): Negocio (nombre + logo), Mi cuenta (perfil + contraseña), Alertas y Respaldos (solo propietario) y App. Estilos `.config-tabs`/`.config-tab`/`.config-panel` reutilizando el diseño de las pestañas de Facturación (`components.css`).
+  - **Instalar app (PWA)**: botón en la pestaña App que usa `beforeinstallprompt`; si el navegador no lo permite (iPhone), se muestran las instrucciones de Compartir → "Añadir a pantalla de inicio". Detecta si ya está instalada (`display-mode: standalone`).
+  - Pruebas: `npm test` → integración **25/25** + e2e **1/1** (el e2e ahora comprueba token CSRF ausente e inválido → 403); `npm run test:smoke` → **11/11**, 0 errores (el smoke obtiene el token tras el login).
 
 ## Fases
 - [x] 1. Estructura base, Servidor y Login Seguro
@@ -158,8 +164,9 @@
 - [x] 13. Ajuste de Facturación: `+` único abre mesas (se quitó la venta adicional por defecto) y sin botón "Cobro directo" ✅
 - [x] 14. Ajuste: nombre de mesa visible como "Mesa <cliente>" ✅
 - [x] 15. Fase G (tercera ronda de criticas): **G1** cambios simples ✅ · **G2** mesas con zonas ✅ · **G3** recorte/edición de imagen de producto ✅
-- [ ] 16. Fase H (publicación en Vercel): **H1** capa BD dual local/Turso ✅ · **H2** fotos y backups a Vercel Blob ✅ · **H3** runtime Vercel ✅ · **H4** migración de los datos reales a Turso (pendiente)
+- [x] 16. Fase H (publicación en Vercel): **H1** capa BD dual local/Turso ✅ · **H2** fotos y backups a Vercel Blob ✅ · **H3** runtime Vercel ✅ · **H4** descartado (la base vieja no se migra)
 - [x] 17. Fase I: pago combinado, inversiones, formato de miles y PWA ✅ (v2.0.1)
+- [x] 18. Token CSRF por sesión + Configuración por pestañas + botón "Instalar app" ✅ (pendiente de publicar)
 
 ## Estructura de archivos
 ```
@@ -207,11 +214,11 @@ reglas-new.txt        → reglas críticas del proyecto
 ```
 
 ## Pendientes y problemas conocidos
-- **H4**: migrar los datos reales de `data/chamalu.db` a Turso (con respaldo previo en `data/backups/`). La app ya está desplegada en Vercel con Turso, pero la BD remota no tiene los datos del bar.
-- **No borrar `data/chamalu.db`**: es la única base con los datos reales (44 productos, 21 ventas, 2 usuarios; última venta 2026-10-15). `data/dev.db` es solo de desarrollo/pruebas.
+- **H4 descartado**: el propietario confirmó que `data/chamalu.db` es una base vieja de pruebas; no se migra. Producción usa su propia BD en Turso.
+- **`data/chamalu.db` se deja para pruebas**: no borrarlo. `data/dev.db` es la base de desarrollo.
 - **Push a `main` despliega a producción** (Git conectado a Vercel). Para probar sin publicar, subir a una rama aparte.
 - La Fase I no tiene pruebas automatizadas (decisión del propietario). Si se toca pago combinado o inversiones, conviene añadirlas.
 - **PWA**: revisar la estrategia de caché del service worker para que una actualización no deje a los celulares con la versión vieja.
-- CSRF: se mantiene solo la verificación de `Origin` (decidido). Ahora que el sistema está en Internet, conviene añadir un token por sesión (pendiente de decisión).
+- **CSRF**: se mantiene la verificación de `Origin` **más** el token `X-CSRF-Token` por sesión (HMAC con `SESSION_SECRET`). Cualquier cliente nuevo debe enviar el header.
 - Nunca usar `admin123` en producción; el sistema obliga a cambiarla en el primer ingreso.
 - El flujo de decisiones vive en `decisiones.txt`: yo escribo las preguntas (A, B, C…) y el propietario responde bajo `R:`; solo él decide.

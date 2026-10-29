@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { initSchema, seedAdmin, limpiarSesiones } from './config/db.js';
 import { requireAuth, bloquearSiDebeCambiarPassword } from './middlewares/auth.js';
-import { verificarOrigen } from './middlewares/csrf.js';
+import { verificarOrigen, verificarTokenCsrf } from './middlewares/csrf.js';
 import authRoutes from './routes/auth.routes.js';
 import cajaRoutes from './routes/caja.routes.js';
 import categoriasRoutes from './routes/categorias.routes.js';
@@ -81,6 +81,7 @@ app.use(
 app.use(express.json({ limit: '5mb' }));
 app.use(cookieParser());
 app.use(verificarOrigen);
+app.use(verificarTokenCsrf);
 
 app.use('/api/auth', authRoutes);
 
