@@ -1,13 +1,14 @@
 # Memoria del proyecto - Chamalú Beer
 
 ## Estado actual
-- **Fase H (publicación en Vercel) en curso**: **H1** capa BD dual local/async ✅ · **H2** fotos y backups a Vercel Blob ✅ · **H3** runtime Vercel ✅ · **H4** cuentas y migración de datos (pendiente).
-- **Fase G (tercera ronda de criticas) completada**: **G1** (cambios simples) ✅ · **G2** (mesas con zonas) ✅ · **G3** (recorte/edición de imagen de producto) ✅.
-- Las decisiones de la Fase G están todas respondidas en `decisiones.txt` (aprobadas por el propietario).
-- Versión de la app: **2.0.0** (`package.json`, única fuente; visible en el pie del menú lateral y en el login).
+- **Fase I completada y publicada como v2.0.1**: pago combinado, inversiones, formato de miles y PWA. El tag `v2.0.1` se movió al commit `39f18c5` tras corregir un `}` sobrante en `public/js/ui.js` (rompía todo el frontend) y el registro del service worker.
+- **Producción en Vercel activa**: `https://chamalu-beer.vercel.app`, con Turso configurado (`TURSO_URL`/`TURSO_TOKEN`). El proyecto tiene **Git conectado**: cualquier push a `main` despliega a producción.
+- **Pendiente de la Fase H: H4** (migrar los datos reales de `data/chamalu.db` a Turso). H1 (BD dual), H2 (Blob) y H3 (runtime) están completas.
+- **Fase G completada** (G1 cambios simples, G2 mesas con zonas, G3 recorte de imagen). Decisiones en `decisiones.txt`.
+- Versión de la app: **2.0.1** (`package.json`, única fuente; visible en el pie del menú lateral y en el login).
 - La **Fase 3** quedó cerrada: Fases A (arreglos y pulido), B (rediseño UX), C (Facturación/POS) y D (Inicio/dashboard) completadas.
 - Fases 1 a 8, Fase 2 (Fase 9), Fase E y el pase de diseño visual completados.
-- Última actualización: 2026-10-20
+- Última actualización: 2026-10-29
 
 ## Decisiones tomadas
 - Stack: Node.js 22.5+ (ESM) + Express 4 + node:sqlite + frontend HTML/CSS/JS puro (sin framework, sin build).
@@ -132,6 +133,14 @@
   - Nueva dependencia: **`@vercel/blob`** (aprobada).
   - **H3 (runtime Vercel) completada**: `server.js` en la raíz (Vercel lo detecta como entrypoint y exporta la app como función serverless; sin rewrites, `public/` lo sirve el CDN). `server/app.js`: `export default app`; `app.listen` y los `setInterval` solo corren sin `process.env.VERCEL` (en la nube el proceso es efímero); escritura de `.env` blindada (FS de solo lectura en Vercel); nuevo `GET /api/cron/mantenimiento` montado **antes** de `requireAuth`, validado con `Authorization: Bearer $CRON_SECRET`, ejecuta `generarAlertas()` + `limpiarSesiones()`. `vercel.json` con un cron diario `0 7 * * *`. **Límite del plan Hobby: 1 ejecución al día por cron** (precisión ±59 min); por eso en producción las alertas se generan 1 vez al día (+ en cada arranque en frío), mientras que en local siguen cada 60 s. `express.json({ limit: '5mb' })` corrige BUG-005 (el límite por defecto de 100 KB rechazaba imágenes reales). Verificación en local: cron responde 401 sin clave y 200 con clave correcta.
 - Pruebas Fase H3: `npm test` → integración **25/25** + e2e **1/1**; `npm run test:smoke` → **10/10**, 0 errores. `server.js` arranca y responde.
+- Fase I (nuevos pedidos de Zaida; decisiones en `decisiones.txt`):
+  - **Pago combinado**: tabla `pagos_venta` (migración `001_pagos_venta.sql`) con varios pagos por venta (método + monto). La pantalla de cobro muestra **pagado / falta por pagar** y no cierra hasta que la suma cuadre con el total. **Solo el efectivo suma a la caja**; el resto no.
+  - **Inversiones**: pestaña nueva solo para el propietario (`public/js/modules/inversiones.js`). Campos fecha, descripción, monto y origen (**caja** o **bolsillo**). Origen caja genera salida automática en caja; bolsillo solo queda registrado. Decisión: **solo gasto**, no suma stock (migración `002_inversiones.sql`).
+  - **Formato de miles**: `formatearMiles()`, `limpiarMiles()` y `aplicarFormatoMiles()` en `ui.js`. Se ve con puntos al escribir, se guarda el número limpio y el "0" es un **placeholder invisible** que desaparece al escribir.
+  - **PWA**: `public/manifest.json`, `public/sw.js` (registro movido a `app.js`) e iconos `icon-192.png`/`icon-512.png`. Instalable en celular y PC; requiere HTTPS (producción).
+  - **Migraciones**: carpeta `/migrations` (`000_migrations_aplicadas.sql`, `001_…`, `002_…`) con registro en la tabla `migrations_aplicadas`; se aplican una sola vez al arrancar (local y Turso).
+  - **`release.sh`** corregido: respaldo real con `VACUUM INTO` en `data/backups/`, versión calculada sin la dependencia `semver`, exige árbol limpio y verifica que el tag no exista en local ni en `origin`.
+- Pruebas Fase I: no hay pruebas automatizadas nuevas (decisión del propietario); se validó con `npm test` → integración **25/25** + e2e **1/1** y `npm run test:smoke` → **11/11**, 0 errores (incluye la pestaña Inversiones).
 
 ## Fases
 - [x] 1. Estructura base, Servidor y Login Seguro
@@ -149,12 +158,15 @@
 - [x] 13. Ajuste de Facturación: `+` único abre mesas (se quitó la venta adicional por defecto) y sin botón "Cobro directo" ✅
 - [x] 14. Ajuste: nombre de mesa visible como "Mesa <cliente>" ✅
 - [x] 15. Fase G (tercera ronda de criticas): **G1** cambios simples ✅ · **G2** mesas con zonas ✅ · **G3** recorte/edición de imagen de producto ✅
-- [ ] 16. Fase H (publicación en Vercel): **H1** capa BD dual local/Turso ✅ · **H2** fotos y backups a Vercel Blob ✅ · **H3** runtime Vercel ✅ · **H4** cuentas y migración de datos
+- [ ] 16. Fase H (publicación en Vercel): **H1** capa BD dual local/Turso ✅ · **H2** fotos y backups a Vercel Blob ✅ · **H3** runtime Vercel ✅ · **H4** migración de los datos reales a Turso (pendiente)
+- [x] 17. Fase I: pago combinado, inversiones, formato de miles y PWA ✅ (v2.0.1)
 
 ## Estructura de archivos
 ```
 server.js               → entrypoint para Vercel (importa server/app.js y exporta la app)
 vercel.json             → config de Vercel (cron diario de mantenimiento)
+release.sh              → release: respaldo, sube versión, commit y tag (no sube a GitHub)
+migrations/             → migraciones SQL numeradas + registro en migrations_aplicadas
 server/
   app.js              → arranque, middleware, montaje de rutas, export default app (listen/intervals solo en local), endpoint /api/cron/mantenimiento
   config/db.js        → adaptador dual SQLite local / Turso remoto + schema + migraciones + seed admin + limpiarSesiones() + transaccion()
@@ -163,14 +175,18 @@ server/
   middlewares/        → auth.js, roles.js, rateLimit.js, auditoria.js, csrf.js
   routes/             → auth, caja, categorias, productos, mesas, cuentas,
                         ventas, inventario, gastos, alertas, usuarios,
-                        configuracion, dashboard, reportes
+                        configuracion, dashboard, reportes, inversiones
 public/
   index.html          → SPA (login + shell)
+  manifest.json       → manifiesto PWA (nombre, iconos, colores)
+  sw.js               → service worker de la PWA
+  icon-192.png        → icono PWA 192×192
+  icon-512.png        → icono PWA 512×512
   css/                → variables.css, layout.css, components.css
   js/                 → app.js, api.js, state.js, ui.js
   js/modules/         → inicio, auth, facturacion, gestion, mesas, ventas,
                         reportes, caja, alertas, usuarios, configuracion,
-                        recortador (recorte de imagen con canvas)
+                        inversiones, recortador (recorte de imagen con canvas)
   img/                → logo-default.svg, producto-default.svg
   uploads/            → imágenes subidas por el propietario
 tests/
@@ -179,13 +195,23 @@ tests/
   run-all.mjs         → lanzador de `npm test` (BD temporal + servidor propio)
   smoke-frontend.mjs  → prueba de humo del frontend (Chrome headless + CDP)
   RESULTADOS.md       → resultados documentados
-data/                 → chamalu.db (se crea solo)
+data/
+  chamalu.db          → base con los DATOS REALES del bar (no borrar; se migra a Turso en H4)
+  dev.db              → base de desarrollo/pruebas (por defecto en local)
   backups/            → copias de seguridad (no se versionan)
 BUGS.md               → registro de bugs y errores corregidos
 README.md             → guía de instalación, uso, .env, backups y seguridad
+decisiones.txt        → preguntas del propietario y respuestas aprobadas
+nueva-version.md      → plan de los pedidos de la Fase I
+reglas-new.txt        → reglas críticas del proyecto
 ```
 
 ## Pendientes y problemas conocidos
-- Ninguno crítico. Para desplegar: cambiar la contraseña del admin (el sistema lo exige en el primer ingreso) y no subir `.env`, `data/*.db` ni `data/backups/` (ya están en `.gitignore`).
-- CSRF: se mantiene solo la verificación de `Origin` (decidido). Tiene sentido añadir un token por sesión solo si el sistema se expone a Internet (no es el caso hoy).
+- **H4**: migrar los datos reales de `data/chamalu.db` a Turso (con respaldo previo en `data/backups/`). La app ya está desplegada en Vercel con Turso, pero la BD remota no tiene los datos del bar.
+- **No borrar `data/chamalu.db`**: es la única base con los datos reales (44 productos, 21 ventas, 2 usuarios; última venta 2026-10-15). `data/dev.db` es solo de desarrollo/pruebas.
+- **Push a `main` despliega a producción** (Git conectado a Vercel). Para probar sin publicar, subir a una rama aparte.
+- La Fase I no tiene pruebas automatizadas (decisión del propietario). Si se toca pago combinado o inversiones, conviene añadirlas.
+- **PWA**: revisar la estrategia de caché del service worker para que una actualización no deje a los celulares con la versión vieja.
+- CSRF: se mantiene solo la verificación de `Origin` (decidido). Ahora que el sistema está en Internet, conviene añadir un token por sesión (pendiente de decisión).
+- Nunca usar `admin123` en producción; el sistema obliga a cambiarla en el primer ingreso.
 - El flujo de decisiones vive en `decisiones.txt`: yo escribo las preguntas (A, B, C…) y el propietario responde bajo `R:`; solo él decide.

@@ -20,6 +20,7 @@
 - Nunca desplegar con credenciales por defecto; el admin inicial debe cambiar su contraseña en el primer login.
 - Registrar acciones importantes (login, cambios de precio, borrados).
 - Nunca subir a GitHub .env, data/*.db ni la carpeta uploads (deben estar en .gitignore).
+- El proyecto de Vercel tiene Git conectado: **un push a `main` despliega a producción**. Para probar sin publicar, usar una rama aparte.
 
 ## Datos
 - Operaciones críticas atómicas (cerrar cuenta, mover stock, cerrar caja).
@@ -43,6 +44,7 @@ npm test            # integración + e2e sobre BD temporal (no toca data/chamalu
 npm run test:integracion
 npm run test:e2e    # requiere el servidor corriendo
 npm run test:smoke  # prueba de humo del frontend (Chrome/Edge headless + CDP)
+./release.sh patch|minor|major  # release: respaldo, versión, commit y tag (Git Bash)
 ```
 No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
 
@@ -57,8 +59,10 @@ No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
   - **Local** (desarrollo/pruebas): SQLite en disco con `node:sqlite` (síncrono)
   - **Remoto** (Vercel + Turso): libSQL con `TURSO_URL` y `TURSO_TOKEN`
   - API idéntica en ambos modos: `prepare().get/all/run`, `exec()` y `transaccion(fn, {inmediata})`. Usar siempre `await` (funciona con valor síncrono y con promesa)
-- Archivo SQLite: `data/chamalu.db` (se crea solo; no existe en el modo remoto)
-- El usuario propietario inicial se crea automáticamente: **admin / admin123**
+- Archivo SQLite local: por defecto **`data/dev.db`** en desarrollo y `data/chamalu.db` si `NODE_ENV=production` (no existe en el modo remoto)
+- **`data/chamalu.db` contiene los datos reales del bar**: no borrarlo ni recrearlo (se migra a Turso en H4). `data/dev.db` es solo de desarrollo/pruebas
+- Migraciones en `/migrations` (numeradas) con registro en la tabla `migrations_aplicadas`; se aplican una sola vez al arrancar
+- El usuario propietario inicial se crea automáticamente: **admin / admin123** (solo en una BD nueva; nunca dejarla así en producción)
 - El admin inicial queda marcado con `debe_cambiar_password`: debe cambiar la clave en su primer ingreso (bloqueo también en el servidor)
 - Las tablas se crean con `CREATE TABLE IF NOT EXISTS` en `server/config/db.js`
 - WAL mode + foreign keys activados al arrancar
@@ -70,6 +74,8 @@ No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
 ```
 server.js               → entrypoint para Vercel (exporta la app; local no se usa)
 vercel.json             → config de Vercel (cron diario de mantenimiento)
+release.sh              → release: respaldo (VACUUM INTO), sube versión, commit y tag
+migrations/             → migraciones SQL numeradas (001_pagos_venta, 002_inversiones…)
 server/
   app.js              → arranque, middleware, montaje de rutas, export default app
   config/db.js        → conexión SQLite + schema + migraciones + seed
@@ -78,20 +84,27 @@ server/
   middlewares/        → auth.js, roles.js, rateLimit.js, auditoria.js, csrf.js
   routes/             → auth, caja, categorias, productos, mesas, cuentas,
                         ventas, inventario, gastos, alertas, usuarios,
-                        configuracion, dashboard, reportes
+                        configuracion, dashboard, reportes, inversiones
 public/
   index.html          → SPA (login + shell)
+  manifest.json       → manifiesto PWA
+  sw.js               → service worker (PWA)
+  icon-192.png        → icono PWA
+  icon-512.png        → icono PWA
   css/                → variables, layout, components
   js/                 → app.js (orquestador + menú lateral ocultable ☰), api.js, state.js, ui.js
   js/modules/         → inicio, auth, facturacion (catálogo + venta actual en 2
                         columnas y barra de pestañas), gestion, mesas, ventas,
-                        reportes, caja, alertas, usuarios, configuracion, recortador
+                        reportes, caja, alertas, usuarios, configuracion,
+                        inversiones, recortador
   img/                → logo-default.svg, producto-default.svg
   uploads/            → imágenes subidas por el propietario
 tests/                → integracion.test.js, e2e.test.js, run-all.mjs, smoke-frontend.mjs (node --test)
-data/                 → chamalu.db (se crea solo)
+data/                 → dev.db (desarrollo/pruebas) y chamalu.db (datos reales, no borrar)
+  backups/            → copias de seguridad (no se versionan)
 BUGS.md               → registro de bugs y errores corregidos
 README.md             → guía de instalación, uso, .env, backups y seguridad
+decisiones.txt        → preguntas del propietario y respuestas aprobadas
 ```
 
 ## Zona horaria
