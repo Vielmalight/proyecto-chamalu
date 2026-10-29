@@ -1,6 +1,6 @@
 {
   "name": "chamalu-beer",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Sistema de inventario, ventas y caja para el bar Chamalú Beer",
   "type": "module",
   "main": "server/app.js",
