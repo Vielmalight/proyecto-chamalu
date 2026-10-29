@@ -285,8 +285,14 @@ async function init() {
 }
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      // updateViaCache: 'none' fuerza a buscar el sw.js nuevo en el servidor
+      const registro = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+      await registro.update();
+    } catch {
+      // si el navegador no lo permite, seguimos sin PWA
+    }
   });
 }
 

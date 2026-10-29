@@ -1,4 +1,7 @@
-const CACHE_NAME = 'chamalu-beer-v1';
+// Service worker de la PWA.
+// Estrategia: red primero (para que las actualizaciones lleguen siempre) y
+// caché como respaldo cuando no hay conexión. Las rutas /api/ nunca se cachean.
+const CACHE_NAME = 'chamalu-beer-v2';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
@@ -25,9 +28,7 @@ self.addEventListener('activate', (event) => {
     caches.keys().then((cacheNames) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
-          if (cacheName !== CACHE_NAME) {
-            return caches.delete(cacheName);
-          }
+          if (cacheName !== CACHE_NAME) return caches.delete(cacheName);
         })
       );
     })
@@ -36,22 +37,28 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Solo cachear GET
+  // Solo GET y fuera de la API
   if (event.request.method !== 'GET') return;
-  
-  // No cachear rutas de API
   if (event.request.url.includes('/api/')) return;
-  
+
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).catch(() => {
-        if (event.request.destination === 'document') {
-          return caches.match('/index.html');
+    fetch(event.request)
+      .then((respuesta) => {
+        // Guardamos una copia para poder abrir sin conexión
+        if (respuesta && respuesta.status === 200 && respuesta.type === 'basic') {
+          const copia = respuesta.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copia)).catch(() => {});
         }
-      });
-    })
+        return respuesta;
+      })
+      .catch(async () => {
+        const cacheado = await caches.match(event.request);
+        if (cacheado) return cacheado;
+        if (event.request.destination === 'document') {
+          const inicio = await caches.match('/index.html');
+          if (inicio) return inicio;
+        }
+        return new Response('', { status: 504, statusText: 'Sin conexión' });
+      })
   );
 });

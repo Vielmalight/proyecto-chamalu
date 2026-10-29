@@ -140,7 +140,15 @@ if (!process.env.VERCEL) {
 app.use('/api', (req, res) => res.status(404).json({ error: 'Ruta no encontrada' }));
 
 const publicDir = path.join(__dirname, '..', 'public');
-app.use(express.static(publicDir));
+app.use(express.static(publicDir, {
+  setHeaders: (res, filePath) => {
+    // El service worker y el HTML deben revalidarse siempre para que las
+    // actualizaciones lleguen a los navegadores con la PWA instalada
+    if (filePath.endsWith('sw.js') || filePath.endsWith('index.html')) {
+      res.setHeader('Cache-Control', 'no-cache');
+    }
+  },
+}));
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(publicDir, 'index.html'));

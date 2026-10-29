@@ -218,7 +218,7 @@ reglas-new.txt        → reglas críticas del proyecto
 - **`data/chamalu.db` se deja para pruebas**: no borrarlo. `data/dev.db` es la base de desarrollo.
 - **Push a `main` despliega a producción** (Git conectado a Vercel). Para probar sin publicar, subir a una rama aparte.
 - La Fase I no tiene pruebas automatizadas (decisión del propietario). Si se toca pago combinado o inversiones, conviene añadirlas.
-- **PWA**: revisar la estrategia de caché del service worker para que una actualización no deje a los celulares con la versión vieja.
+- **PWA**: `sw.js` usa **red primero** (caché solo como respaldo sin conexión) y `CACHE_NAME` subió a `v2`; `sw.js` e `index.html` se sirven con `Cache-Control: no-cache` y el registro usa `updateViaCache: 'none'`. Así las actualizaciones llegan aunque la app esté instalada.
 - **CSRF**: se mantiene la verificación de `Origin` **más** el token `X-CSRF-Token` por sesión (HMAC con `SESSION_SECRET`). Cualquier cliente nuevo debe enviar el header.
 - Nunca usar `admin123` en producción; el sistema obliga a cambiarla en el primer ingreso.
 - El flujo de decisiones vive en `decisiones.txt`: yo escribo las preguntas (A, B, C…) y el propietario responde bajo `R:`; solo él decide.
