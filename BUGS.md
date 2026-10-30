@@ -16,6 +16,7 @@ corrige algo. Las nuevas entradas se agregan al final con el siguiente número.
 | BUG-005 | `express.json()` sin límite: imágenes >100 KB rechazadas (413) | Media | Corregido | 2026-10-20 |
 | BUG-006 | Facturar fallaba con "Token CSRF inválido" en producción | Alta | Corregido | 2026-10-30 |
 | BUG-007 | Subir imágenes fallaba: almacén Blob privado con `access: 'public'` | Alta | Corregido | 2026-10-30 |
+| BUG-008 | Facturación no permitía cobrar con cambio (pago en efectivo mayor al total) | Alta | Corregido | 2026-10-30 |
 
 Gravedad: **Alta** (rompe una función), **Media** (afecta parcialmente),
 **Baja** (detalle/cosmético o solo en pruebas).
@@ -147,6 +148,23 @@ Gravedad: **Alta** (rompe una función), **Media** (afecta parcialmente),
   `server/routes/cuentas.routes.js`, `server/routes/auth.routes.js`,
   `server/routes/configuracion.routes.js`.
 - **Estado:** Corregido (probado en local; falta verificar en producción).
+
+---
+
+### BUG-008 - Facturación no permitía cobrar con cambio
+- **Fecha:** 2026-10-30.
+- **Síntoma:** con una cuenta de $45.000, si el cliente pagaba con $50.000, el
+  botón "Confirmar cobro" seguía deshabilitado y no se podía cobrar ni dar el
+  cambio.
+- **Causa:** el frontend solo habilitaba el botón si lo pagado era **exactamente
+  igual** al total (`pagado === aPagar`). El backend sí admite exceso, pero solo
+  con un único pago en efectivo.
+- **Solución:** habilitar el botón cuando lo pagado sea igual o mayor al total y
+  permitir el exceso solo si hay un único pago en efectivo (misma regla que el
+  servidor). Si hay exceso con pago mixto/tarjeta, se muestra el aviso "El cambio
+  solo aplica si el pago es únicamente en efectivo".
+- **Archivos:** `public/js/modules/facturacion.js`.
+- **Estado:** Corregido (pruebas automáticas OK; falta verificar en producción).
 
 ---
 

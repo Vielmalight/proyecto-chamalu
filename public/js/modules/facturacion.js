@@ -535,6 +535,7 @@ export async function renderFacturacion(container) {
     const pagosLista = overlay.querySelector('#cobro-pagos-lista');
     const btnAgregar = overlay.querySelector('#cobro-agregar-pago');
     const btnConfirmar = overlay.querySelector('#cobro-confirmar');
+    const errEl = overlay.querySelector('#cobro-error');
     
     // Aplicar formato de miles
     aplicarFormatoMiles(descEl);
@@ -605,7 +606,14 @@ export async function renderFacturacion(container) {
       overlay.querySelector('#cobro-cambio-linea').classList.toggle('hidden', pagosEfectivo <= 0);
       overlay.querySelector('#cobro-cambio').textContent = pesos(Math.max(0, cambio));
       
-      btnConfirmar.disabled = !(pagado === aPagar && pagos.length > 0);
+      // El cambio solo se permite con un único pago en efectivo (igual que el servidor)
+      const pagosValidos = pagos.filter(p => (Number(p.monto) || 0) > 0);
+      const soloEfectivo = pagosValidos.length === 1 && pagosValidos[0].metodo_pago === 'EFECTIVO';
+      const excesoNoPermitido = pagado > aPagar && !soloEfectivo;
+      errEl.textContent = excesoNoPermitido
+        ? 'El cambio solo aplica si el pago es únicamente en efectivo'
+        : '';
+      btnConfirmar.disabled = !(pagado >= aPagar && pagos.length > 0 && !excesoNoPermitido);
     }
     
     descEl.addEventListener('input', recalcular);
@@ -614,7 +622,6 @@ export async function renderFacturacion(container) {
 
     overlay.querySelector('#cobro-cancelar').addEventListener('click', () => overlay.remove());
     overlay.querySelector('#cobro-confirmar').addEventListener('click', () => {
-      const errEl = overlay.querySelector('#cobro-error');
       errEl.textContent = '';
       const desc = limpiarMiles(descEl.value);
       const prop = limpiarMiles(propEl.value);
