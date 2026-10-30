@@ -51,8 +51,9 @@ No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
 
 ## Configuración
 - `.env` se carga automáticamente con `process.loadEnvFile()` (built-in de Node 20.6+)
-- Si `SESSION_SECRET` no existe, se genera uno aleatorio y se guarda en `.env`
-- Variables: `PORT`, `SESSION_SECRET`, `SESSION_TIMEOUT_MIN`, `NODE_ENV`
+- Si `SESSION_SECRET` no existe en local, se genera uno aleatorio y se guarda en `.env`
+- **En Vercel `SESSION_SECRET` es obligatoria** (Production): sin ella cada instancia genera un secreto distinto y todo POST/PUT/DELETE falla con "Token CSRF inválido" (BUG-006). Al cambiarla hay que **redeployar**
+- Variables: `PORT`, `SESSION_SECRET`, `SESSION_TIMEOUT_MIN`, `NODE_ENV`; en Vercel además `TURSO_URL`, `TURSO_TOKEN` y `BLOB_READ_WRITE_TOKEN`
 - Ejemplo en `.env.example`
 
 ## Base de datos

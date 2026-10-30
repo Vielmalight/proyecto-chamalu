@@ -14,6 +14,8 @@ corrige algo. Las nuevas entradas se agregan al final con el siguiente número.
 | BUG-004 | Listeners/lecturas tras `await` fallan al cambiar de pestaña rápido | Media | Corregido | 2026-10-13 |
 | TEST-001 | Aserción de stock incorrecta en la prueba e2e | Baja | Corregido | 2026-10-12 |
 | BUG-005 | `express.json()` sin límite: imágenes >100 KB rechazadas (413) | Media | Corregido | 2026-10-20 |
+| BUG-006 | Facturar fallaba con "Token CSRF inválido" en producción | Alta | Corregido | 2026-10-30 |
+| BUG-007 | Subir imágenes fallaba: almacén Blob privado con `access: 'public'` | Alta | Corregido | 2026-10-30 |
 
 Gravedad: **Alta** (rompe una función), **Media** (afecta parcialmente),
 **Baja** (detalle/cosmético o solo en pruebas).
@@ -99,6 +101,52 @@ Gravedad: **Alta** (rompe una función), **Media** (afecta parcialmente),
   `app.use(express.json({ limit: '5mb' }))`.
 - **Archivos:** `server/app.js`.
 - **Estado:** Corregido (latente; no se había reportado en uso real).
+
+### BUG-006 - Facturar fallaba con "Token CSRF inválido" en producción
+- **Fecha:** 2026-10-30 (detectado en uso real, producción Vercel).
+- **Síntoma:** en `https://chamalu-beer.vercel.app` se podía iniciar sesión y
+  navegar, pero cualquier acción que cambia datos (facturar, cobrar, guardar)
+  fallaba con `403 Token CSRF inválido`. Los GET seguían funcionando.
+- **Causa:** el token CSRF se firma con `SESSION_SECRET`
+  (`server/middlewares/csrf.js`). En Vercel **no estaba configurada** esa
+  variable, así que cada instancia serverless generaba un secreto aleatorio
+  distinto al arrancar (`server/app.js`, y no se podía guardar en `.env` por el
+  disco de solo lectura). El login devolvía un token firmado por una instancia y
+  el POST caía en otra, que lo validaba con otro secreto.
+- **Solución:** agregar `SESSION_SECRET` (Production) en el proyecto
+  `chamalu-beer` de Vercel y redeployar. **Es obligatorio en la nube**: no
+  depender del secreto autogenerado. El token sigue funcionando con varias
+  instancias porque todas comparten la misma variable.
+- **Archivos:** configuración de Vercel (`SESSION_SECRET`); sin cambios de
+  código.
+- **Contexto adicional:** el mismo repositorio (`Vielmalight/proyecto-chamalu`)
+  estaba conectado a **dos** proyectos de Vercel (`proyecto-chamalu` y
+  `chamalu-beer`), por lo que cada push desplegaba doble. Se desconectó el
+  repositorio de `proyecto-chamalu` y se eliminó ese proyecto; el almacén Blob
+  (`proyecto-chamalu-blob`) se conectó a `chamalu-beer` con
+  `BLOB_READ_WRITE_TOKEN`.
+- **Estado:** Corregido.
+
+### BUG-007 - Subir imágenes fallaba: almacén Blob privado con `access: 'public'`
+- **Fecha:** 2026-10-30 (detectado al conectar el Blob a `chamalu-beer`).
+- **Síntoma:** al subir el logo o la foto de un producto, la app devolvía error y
+  la imagen no se guardaba.
+- **Causa:** el almacén `proyecto-chamalu-blob` es **privado** (se comparte con
+  los respaldos, que contienen datos sensibles), pero `subirImagen()` subía con
+  `access: 'public'`. Vercel Blob rechaza el acceso público en un almacén
+  privado. Además, una imagen privada **no se puede mostrar con su URL directa**
+  en un `<img>`, y el frontend la usaba así.
+- **Solución:** subir con `access: 'private'` y guardar en la BD la ruta interna
+  `/api/imagenes/<archivo>`. Nueva ruta `GET /api/imagenes/:nombre` (con
+  sesión) que lee el blob privado con `get()` y lo entrega con su `Content-Type`.
+  `normalizarImagen()` convierte cualquier URL antigua de Blob a la ruta nueva al
+  responder (productos, ítems de cuenta, logo y `/api/auth/me`). El modo local
+  sigue igual (`/uploads/…`).
+- **Archivos:** `server/config/almacen.js`, `server/routes/imagenes.routes.js`
+  (nuevo), `server/app.js`, `server/routes/productos.routes.js`,
+  `server/routes/cuentas.routes.js`, `server/routes/auth.routes.js`,
+  `server/routes/configuracion.routes.js`.
+- **Estado:** Corregido (probado en local; falta verificar en producción).
 
 ---
 
