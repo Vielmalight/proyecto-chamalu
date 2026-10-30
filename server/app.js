@@ -20,6 +20,7 @@ import gastosRoutes from './routes/gastos.routes.js';
 import alertasRoutes, { generarAlertas } from './routes/alertas.routes.js';
 import usuariosRoutes from './routes/usuarios.routes.js';
 import configuracionRoutes from './routes/configuracion.routes.js';
+import imagenesRoutes from './routes/imagenes.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import reportesRoutes from './routes/reportes.routes.js';
 import inversionesRoutes from './routes/inversiones.routes.js';
@@ -120,6 +121,8 @@ app.use('/api/gastos', gastosRoutes);
 app.use('/api/alertas', alertasRoutes);
 app.use('/api/usuarios', usuariosRoutes);
 app.use('/api/configuracion', configuracionRoutes);
+// Imágenes privadas de Vercel Blob (productos y logo), servidas con sesión
+app.use('/api/imagenes', imagenesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/reportes', reportesRoutes);
 app.use('/api/inversiones', inversionesRoutes);

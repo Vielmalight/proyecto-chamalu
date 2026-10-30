@@ -7,6 +7,7 @@ import { APP_VERSION } from '../config/version.js';
 import { loginLimiter } from '../middlewares/rateLimit.js';
 import { requireAuth } from '../middlewares/auth.js';
 import { tokenCsrf } from '../middlewares/csrf.js';
+import { normalizarImagen } from '../config/almacen.js';
 import { logAuditoria } from '../middlewares/auditoria.js';
 
 const router = Router();
@@ -36,7 +37,7 @@ async function datosSesion(u, tokenSesion) {
     csrf_token: tokenCsrf(tokenSesion),
     config: {
       nombre_negocio: nombre?.valor || 'Chamalú Beer',
-      logo: logo?.valor || '',
+      logo: normalizarImagen(logo?.valor || ''),
     },
     turno_caja: turno || null,
   };

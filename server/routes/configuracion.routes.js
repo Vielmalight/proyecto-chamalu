@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { Readable } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { db } from '../config/db.js';
-import { subirImagen } from '../config/almacen.js';
+import { subirImagen, normalizarImagen } from '../config/almacen.js';
 import { nowCO } from '../config/constants.js';
 import { requireRole } from '../middlewares/roles.js';
 import { logAuditoria } from '../middlewares/auditoria.js';
@@ -143,6 +143,7 @@ router.get('/', async (req, res, next) => {
     const rows = await db.prepare('SELECT * FROM configuracion').all();
     const config = {};
     rows.forEach((r) => { config[r.clave] = r.valor; });
+    if (config.logo) config.logo = normalizarImagen(config.logo);
     res.json(config);
   } catch (err) {
     next(err);

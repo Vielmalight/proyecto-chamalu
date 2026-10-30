@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { db } from '../config/db.js';
-import { subirImagen } from '../config/almacen.js';
+import { subirImagen, normalizarImagen } from '../config/almacen.js';
 import { requireRole } from '../middlewares/roles.js';
 import { logAuditoria } from '../middlewares/auditoria.js';
 
@@ -25,6 +25,7 @@ router.get('/', async (req, res, next) => {
     }
     sql += ' ORDER BY p.nombre';
     let rows = await db.prepare(sql).all(...params);
+    rows = rows.map((p) => ({ ...p, imagen_url: normalizarImagen(p.imagen_url) }));
     if (req.usuario.rol === 'CAJERO') {
       rows = rows.map(({ precio_compra, ...rest }) => rest);
     }

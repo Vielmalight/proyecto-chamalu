@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { db } from '../config/db.js';
 import { nowCO } from '../config/constants.js';
+import { normalizarImagen } from '../config/almacen.js';
 import { logAuditoria } from '../middlewares/auditoria.js';
 
 const router = Router();
@@ -25,6 +26,7 @@ async function cuentaConItems(id) {
     WHERE ic.cuenta_id = ?
     ORDER BY ic.id
   `).all(cuenta.id);
+  items.forEach((i) => { i.imagen_url = normalizarImagen(i.imagen_url); });
   const total = items.reduce((sum, i) => sum + i.subtotal, 0);
   const mesa = cuenta.mesa_id
     ? await db.prepare('SELECT * FROM mesas WHERE id = ?').get(cuenta.mesa_id)
