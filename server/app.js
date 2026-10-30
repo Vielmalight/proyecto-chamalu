@@ -79,6 +79,9 @@ app.use(
         imgSrc: ["'self'", 'data:', 'https:'],
       },
     },
+    // Chrome envía "Origin: null" en los formularios POST cuando la política es
+    // no-referrer; con same-origin el navegador manda el origen real (CSRF).
+    referrerPolicy: { policy: 'same-origin' },
   })
 );
 // Límite de 5 MB: las imágenes de producto en base64 superan el 100 KB por defecto

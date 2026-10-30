@@ -49,11 +49,7 @@ export function verificarOrigen(req, res, next) {
     xForwardedHost: req.get('X-Forwarded-Host'),
     url: req.originalUrl,
   });
-  return res.status(403).json({
-    error: 'Origen no permitido',
-    // Temporal para diagnosticar el rechazo en producción
-    debug: { origin, host: req.get('Host'), xfh: req.get('X-Forwarded-Host') },
-  });
+  return res.status(403).json({ error: 'Origen no permitido' });
 }
 
 export function verificarTokenCsrf(req, res, next) {

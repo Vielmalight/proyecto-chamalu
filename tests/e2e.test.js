@@ -531,6 +531,11 @@ test('Panel del desarrollador y suspensión del servicio', async () => {
   // 1) El panel existe y muestra su propio login
   let res = await fetch(BASE + '/panel-dev', { redirect: 'manual' });
   assert.strictEqual(res.status, 200, 'el panel responde');
+  assert.strictEqual(
+    res.headers.get('referrer-policy'),
+    'same-origin',
+    'referrer-policy same-origin (evita Origin: null en formularios Chrome)'
+  );
   let html = await res.text();
   assert.ok(html.includes('Panel del desarrollador'), 'muestra el login del panel');
 
