@@ -25,13 +25,35 @@ export function verificarOrigen(req, res, next) {
 
   let origenHost;
   try {
-    origenHost = new URL(origin).host;
+    origenHost = new URL(origin).host.toLowerCase();
   } catch {
+    console.warn('origen rechazado (inválido)', { origin, host: req.get('Host') });
     return res.status(403).json({ error: 'Origen no permitido' });
   }
 
-  if (origenHost === req.get('Host')) return next();
-  return res.status(403).json({ error: 'Origen no permitido' });
+  // Vercel puede enviar el host real en x-forwarded-host; se aceptan ambos y
+  // se ignora el puerto (el navegador puede omitirlo).
+  const hosts = [req.get('Host'), req.get('X-Forwarded-Host')]
+    .filter(Boolean)
+    .flatMap((h) => h.split(','))
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+  const sinPuerto = (h) => h.replace(/:\d+$/, '');
+
+  const permitido = hosts.some((h) => h === origenHost || sinPuerto(h) === sinPuerto(origenHost));
+  if (permitido) return next();
+
+  console.warn('origen rechazado', {
+    origin,
+    host: req.get('Host'),
+    xForwardedHost: req.get('X-Forwarded-Host'),
+    url: req.originalUrl,
+  });
+  return res.status(403).json({
+    error: 'Origen no permitido',
+    // Temporal para diagnosticar el rechazo en producción
+    debug: { origin, host: req.get('Host'), xfh: req.get('X-Forwarded-Host') },
+  });
 }
 
 export function verificarTokenCsrf(req, res, next) {
