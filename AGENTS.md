@@ -53,7 +53,7 @@ No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
 - `.env` se carga automáticamente con `process.loadEnvFile()` (built-in de Node 20.6+)
 - Si `SESSION_SECRET` no existe en local, se genera uno aleatorio y se guarda en `.env`
 - **En Vercel `SESSION_SECRET` es obligatoria** (Production): sin ella cada instancia genera un secreto distinto y todo POST/PUT/DELETE falla con "Token CSRF inválido" (BUG-006). Al cambiarla hay que **redeployar**
-- Variables: `PORT`, `SESSION_SECRET`, `SESSION_TIMEOUT_MIN`, `NODE_ENV`; en Vercel además `TURSO_URL`, `TURSO_TOKEN` y `BLOB_READ_WRITE_TOKEN`
+- Variables: `PORT`, `SESSION_SECRET`, `SESSION_TIMEOUT_MIN`, `NODE_ENV`; en Vercel además `TURSO_URL`, `TURSO_TOKEN` y `BLOB_READ_WRITE_TOKEN`. Panel privado (opcional, sin ellas `/panel-dev` da 404): `DEV_USER`, `DEV_PASSWORD_HASH` (bcrypt) y `DEV_SESSION_TIMEOUT_MIN`
 - Ejemplo en `.env.example`
 
 ## Base de datos
@@ -77,24 +77,26 @@ No hay `npm run build` ni script de lint. Las pruebas corren con `node --test`.
 server.js               → entrypoint para Vercel (exporta la app; local no se usa)
 vercel.json             → config de Vercel (cron diario de mantenimiento)
 release.sh              → release: respaldo (VACUUM INTO), sube versión, commit y tag
-migrations/             → migraciones SQL numeradas (001_pagos_venta, 002_inversiones…)
+migrations/             → migraciones SQL numeradas (001_pagos_venta, 002_inversiones, 003_licencia…)
 server/
   app.js              → arranque, middleware, montaje de rutas, export default app
   config/db.js        → conexión SQLite + schema + migraciones + seed
   config/almacen.js   → almacén dual de imágenes (uploads local / Vercel Blob remoto)
   config/constants.js → roles, módulos, nowCO(), sumarMinutos()
-  middlewares/        → auth.js, roles.js, rateLimit.js, auditoria.js, csrf.js
+  middlewares/        → auth.js, roles.js, rateLimit.js, auditoria.js, csrf.js,
+                        licencia.js (interruptor de acceso con caché y pantalla 503)
   routes/             → auth, caja, categorias, productos, mesas, cuentas,
                         ventas, inventario, gastos, alertas, usuarios,
-                        configuracion, dashboard, reportes, inversiones
+                        configuracion, dashboard, reportes, inversiones,
+                        dev.routes.js (panel privado /panel-dev)
 public/
   index.html          → SPA (login + shell)
   manifest.json       → manifiesto PWA
   sw.js               → service worker (PWA)
   icon-192.png        → icono PWA
   icon-512.png        → icono PWA
-  css/                → variables, layout, components
-  js/                 → app.js (orquestador + menú lateral ocultable ☰), api.js, state.js, ui.js
+  css/                → variables, layout, components, panel-dev (panel privado)
+  js/                 → app.js (orquestador + menú lateral ocultable ☰), api.js, state.js, ui.js, pwa.js
   js/modules/         → inicio, auth, facturacion (catálogo + venta actual en 2
                         columnas y barra de pestañas), gestion, mesas, ventas,
                         reportes, caja, alertas, usuarios, configuracion,

@@ -1,6 +1,7 @@
 # Memoria del proyecto - Chamalú Beer
 
 ## Estado actual
+- **Interruptor de acceso (2026-10-30, pendiente de commit)**: panel privado en `/panel-dev` para suspender/habilitar la web. Login propio (`dev_sid`, 60 min deslizantes, rate limit), CSRF propio y credenciales `DEV_USER`/`DEV_PASSWORD_HASH` (bcrypt). Sin configurar responde 404. Al suspender: páginas 503 con mensaje y API 403; estáticos y cron siguen; panel nunca se bloquea. Historial en `licencia_historial`. Pruebas: 29/29 integración y 2/2 e2e.
 - **Fase I completada y publicada como v2.0.1**: pago combinado, inversiones, formato de miles y PWA. El tag `v2.0.1` se movió al commit `39f18c5` tras corregir un `}` sobrante en `public/js/ui.js` (rompía todo el frontend) y el registro del service worker.
 - **Producción en Vercel activa**: `https://chamalu-beer.vercel.app`, con Turso (`TURSO_URL`/`TURSO_TOKEN`), `SESSION_SECRET` y Blob (`BLOB_READ_WRITE_TOKEN`) configurados. El proyecto tiene **Git conectado**: cualquier push a `main` despliega a producción.
 - **Un solo proyecto de Vercel (2026-10-30)**: el repo `Vielmalight/proyecto-chamalu` estaba conectado a **dos** proyectos (`proyecto-chamalu` y `chamalu-beer`), así que cada push desplegaba doble. Se desconectó el repo de `proyecto-chamalu` y se **eliminó**; queda solo `chamalu-beer`. El almacén Blob `proyecto-chamalu-blob` (nombre heredado) se conectó a `chamalu-beer`. Ver BUG-006.
@@ -18,6 +19,7 @@
 - Seguridad: bcryptjs para contraseñas, rate-limit en login (5 intentos/15 min), auditoría en acciones clave (incluye login y login fallido), rol verificado en el servidor (no solo en el frontend).
 - El admin inicial se crea con la marca `debe_cambiar_password`: en su primer ingreso debe cambiar la contraseña antes de usar el resto del sistema (bloqueo también en el servidor).
 - CSRF: se verifica el header `Origin` en peticiones que cambian datos (sin librerías). Clientes sin `Origin` (tests/curl) se permiten.
+- Interruptor de acceso: panel `/panel-dev` fuera del menú y del PWA, con cookie y CSRF propios; el bar no puede verlo ni modificarlo. El estado se cachea 30 s (se invalida al cambiarlo) y si la BD falla se deja pasar (fail-open). `/api/cron/mantenimiento` queda exento.
 - Copias de seguridad manuales desde Configuración con `VACUUM INTO` en `data/backups/`, conservando las últimas 10 (no se versionan en Git).
 - Dinero en enteros COP; operaciones críticas con transacción atómica (`BEGIN IMMEDIATE`).
 - Gastos se manejan dentro del módulo **Caja** (no hay módulo "Gastos" aparte en el menú).

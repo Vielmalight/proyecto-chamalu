@@ -32,6 +32,29 @@ async function pedir(path, { method = 'GET', body, cookie, origin, csrf } = {}) 
   return { status: res.status, data, cookie: cookieNueva };
 }
 
+// Petición de formulario del panel (urlencoded), sin seguir redirecciones
+async function pedirForm(path, { datos = {}, cookie } = {}) {
+  const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+  if (cookie) headers.Cookie = cookie;
+  const res = await fetch(BASE + path, {
+    method: 'POST',
+    headers,
+    body: new URLSearchParams(datos).toString(),
+    redirect: 'manual',
+  });
+  return {
+    status: res.status,
+    location: res.headers.get('location'),
+    cookie: cookieDe(res),
+    texto: await res.text(),
+  };
+}
+
+function csrfDeHtml(html) {
+  const m = html.match(/name="_csrf" value="([a-f0-9]{64})"/);
+  return m ? m[1] : '';
+}
+
 test('Flujo completo end-to-end', async (t) => {
   const sufijo = Date.now();
 
@@ -502,4 +525,98 @@ test('Flujo completo end-to-end', async (t) => {
   const cajeroId = r.data.find((u) => u.usuario === 'cajero_test').id;
   r = await pedir(`/api/usuarios/${cajeroId}`, { method: 'DELETE', cookie: admin });
   assert.strictEqual(r.status, 200, 'se elimina un cajero sin historial');
+});
+
+test('Panel del desarrollador y suspensión del servicio', async () => {
+  // 1) El panel existe y muestra su propio login
+  let res = await fetch(BASE + '/panel-dev', { redirect: 'manual' });
+  assert.strictEqual(res.status, 200, 'el panel responde');
+  let html = await res.text();
+  assert.ok(html.includes('Panel del desarrollador'), 'muestra el login del panel');
+
+  // 1b) Credenciales incorrectas
+  let r = await pedirForm('/panel-dev/login', { datos: { usuario: 'dev', password: 'mala' } });
+  assert.strictEqual(r.status, 401, 'credenciales incorrectas rechazadas');
+
+  // 1c) Login correcto con las variables de entorno de prueba
+  r = await pedirForm('/panel-dev/login', { datos: { usuario: 'dev', password: 'dev123' } });
+  assert.strictEqual(r.status, 303, 'login correcto redirige');
+  const dev = r.cookie;
+  assert.ok(dev.startsWith('dev_sid='), 'entrega la cookie dev_sid');
+
+  // 2) Panel autenticado con estado activo y token CSRF
+  res = await fetch(BASE + '/panel-dev', { headers: { Cookie: dev } });
+  assert.strictEqual(res.status, 200, 'panel autenticado');
+  html = await res.text();
+  assert.ok(html.includes('Activa'), 'muestra el estado activo');
+  const csrf = csrfDeHtml(html);
+  assert.ok(csrf, 'incluye el token CSRF');
+
+  // 3) La dueña no tiene API de licencia
+  r = await pedir('/api/auth/login', { method: 'POST', body: { usuario: 'admin', password: 'admin123' } });
+  const admin = r.cookie;
+  r = await pedir('/api/licencia', { cookie: admin });
+  assert.strictEqual(r.status, 404, 'no existe API de licencia para el bar');
+
+  // 4) CSRF: suspender sin token se rechaza
+  r = await pedirForm('/panel-dev/estado', { cookie: dev, datos: { accion: 'suspender', mensaje: 'x' } });
+  assert.strictEqual(r.status, 403, 'CSRF: suspender sin token rechazado');
+
+  // 5) Suspender con mensaje (que incluye HTML para probar el escapado)
+  const mensaje = 'Mantenimiento <script>alert(1)</script>';
+  r = await pedirForm('/panel-dev/estado', {
+    cookie: dev,
+    datos: { accion: 'suspender', mensaje, _csrf: csrf },
+  });
+  assert.strictEqual(r.status, 303, 'suspensión aplicada');
+
+  // 5b) La web muestra la pantalla de suspensión y escapa el mensaje
+  res = await fetch(BASE + '/');
+  assert.strictEqual(res.status, 503, 'la web queda suspendida');
+  const pagina = await res.text();
+  assert.ok(pagina.includes('Servicio suspendido'), 'muestra la pantalla de suspensión');
+  assert.ok(pagina.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'el mensaje se escapa');
+  assert.ok(!pagina.includes('<script>alert(1)</script>'), 'sin XSS en el mensaje');
+
+  // 5c) La API responde 403 y el panel sigue disponible
+  r = await pedir('/api/productos');
+  assert.strictEqual(r.status, 403, 'API bloqueada');
+  assert.strictEqual(r.data.error, 'Servicio suspendido');
+
+  res = await fetch(BASE + '/panel-dev', { headers: { Cookie: dev } });
+  assert.strictEqual(res.status, 200, 'el panel no se bloquea');
+
+  // 5d) Los estáticos se siguen sirviendo
+  res = await fetch(BASE + '/css/panel-dev.css');
+  assert.strictEqual(res.status, 200, 'los estilos siguen disponibles');
+
+  // 6) Habilitar de nuevo
+  res = await fetch(BASE + '/panel-dev', { headers: { Cookie: dev } });
+  html = await res.text();
+  const csrf2 = csrfDeHtml(html);
+  assert.ok(csrf2, 'token CSRF para habilitar');
+  r = await pedirForm('/panel-dev/estado', {
+    cookie: dev,
+    datos: { accion: 'habilitar', _csrf: csrf2 },
+  });
+  assert.strictEqual(r.status, 303, 'habilitación aplicada');
+
+  res = await fetch(BASE + '/');
+  assert.strictEqual(res.status, 200, 'la web vuelve a funcionar');
+  r = await pedir('/api/productos');
+  assert.strictEqual(r.status, 401, 'la API vuelve a pedir sesión');
+
+  // 7) El historial muestra los cambios
+  res = await fetch(BASE + '/panel-dev', { headers: { Cookie: dev } });
+  html = await res.text();
+  assert.ok(html.includes('suspendida') && html.includes('activa'), 'historial con los cambios');
+
+  // 8) Cerrar la sesión del panel
+  const csrf3 = csrfDeHtml(html);
+  r = await pedirForm('/panel-dev/logout', { cookie: dev, datos: { _csrf: csrf3 } });
+  assert.strictEqual(r.status, 303, 'logout del panel');
+  res = await fetch(BASE + '/panel-dev', { headers: { Cookie: dev } });
+  assert.strictEqual(res.status, 200, 'vuelve al login');
+  const login = await res.text();
+  assert.ok(login.includes('Entrar'), 'muestra el formulario de acceso');
 });

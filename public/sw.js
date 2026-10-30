@@ -1,7 +1,7 @@
 // Service worker de la PWA.
 // Estrategia: red primero (para que las actualizaciones lleguen siempre) y
 // caché como respaldo cuando no hay conexión. Las rutas /api/ nunca se cachean.
-const CACHE_NAME = 'chamalu-beer-v2';
+const CACHE_NAME = 'chamalu-beer-v4';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
@@ -20,7 +20,12 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => cache.addAll(URLS_TO_CACHE))
   );
-  self.skipWaiting();
+  // No se activa sola: espera a que el usuario pulse "Actualizar" en la app
+});
+
+// La app avisa cuando el usuario acepta la actualización
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.tipo === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -37,9 +42,10 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
-  // Solo GET y fuera de la API
+  // Solo GET, fuera de la API y del panel privado del desarrollador
   if (event.request.method !== 'GET') return;
   if (event.request.url.includes('/api/')) return;
+  if (event.request.url.includes('/panel-dev')) return;
 
   event.respondWith(
     fetch(event.request)

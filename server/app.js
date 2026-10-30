@@ -5,9 +5,12 @@ import path from 'node:path';
 import fs from 'node:fs';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { initSchema, seedAdmin, limpiarSesiones } from './config/db.js';
+import { initSchema, seedAdmin, limpiarSesiones, limpiarSesionesDev } from './config/db.js';
 import { requireAuth, bloquearSiDebeCambiarPassword } from './middlewares/auth.js';
 import { verificarOrigen, verificarTokenCsrf } from './middlewares/csrf.js';
+import { verificarLicencia } from './middlewares/licencia.js';
+import { APP_VERSION } from './config/version.js';
+import devRoutes from './routes/dev.routes.js';
 import authRoutes from './routes/auth.routes.js';
 import cajaRoutes from './routes/caja.routes.js';
 import categoriasRoutes from './routes/categorias.routes.js';
@@ -84,6 +87,12 @@ app.use(cookieParser());
 app.use(verificarOrigen);
 app.use(verificarTokenCsrf);
 
+// Panel del desarrollador: independiente del bar y exento del bloqueo de licencia
+app.use('/panel-dev', express.urlencoded({ extended: false, limit: '16kb' }), devRoutes);
+
+// Interruptor de acceso: si la licencia está suspendida, bloquea páginas y API
+app.use(verificarLicencia);
+
 app.use('/api/auth', authRoutes);
 
 // Mantenimiento programado (Vercel Cron, 1 vez al día en plan Hobby):
@@ -98,11 +107,18 @@ app.get('/api/cron/mantenimiento', async (req, res) => {
   try {
     await generarAlertas();
     await limpiarSesiones();
+    await limpiarSesionesDev();
     res.json({ ok: true });
   } catch (err) {
     console.error('cron mantenimiento:', err);
     res.status(500).json({ error: 'Error en el mantenimiento' });
   }
+});
+
+// Versión pública de la app: la usa el frontend para avisar de actualizaciones
+app.get('/api/version', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ version: APP_VERSION });
 });
 
 // Todo lo demás bajo /api requiere sesión activa
@@ -131,6 +147,7 @@ app.use('/api/inversiones', inversionesRoutes);
 // arranque en frío de Vercel)
 generarAlertas().catch((err) => console.error('alertas:', err));
 limpiarSesiones().catch((err) => console.error('limpiar sesiones:', err));
+limpiarSesionesDev().catch((err) => console.error('limpiar sesiones dev:', err));
 
 // Tareas periódicas: solo en local (en Vercel los intervalos no sirven porque
 // el proceso es efímero; allí las ejecuta el cron /api/cron/mantenimiento)

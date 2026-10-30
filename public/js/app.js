@@ -12,6 +12,7 @@ import { renderUsuarios } from './modules/usuarios.js';
 import { renderConfiguracion } from './modules/configuracion.js';
 import { state } from './state.js';
 import { api } from './api.js';
+import { iniciarPWA } from './pwa.js';
 import { setTheme, escapeHtml, toast, mostrar, ocultar } from './ui.js';
 
 const modulosRender = {
@@ -284,16 +285,6 @@ async function init() {
   }
 }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', async () => {
-    try {
-      // updateViaCache: 'none' fuerza a buscar el sw.js nuevo en el servidor
-      const registro = await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-      await registro.update();
-    } catch {
-      // si el navegador no lo permite, seguimos sin PWA
-    }
-  });
-}
+if ('serviceWorker' in navigator) iniciarPWA();
 
 init();

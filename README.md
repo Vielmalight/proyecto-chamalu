@@ -50,6 +50,9 @@ El archivo `.env` se carga solo (`process.loadEnvFile()`). Si no existe `SESSION
 | `SESSION_SECRET` | Clave para firmar/validar sesiones | se genera solo |
 | `SESSION_TIMEOUT_MIN` | Minutos de inactividad antes de cerrar sesión | `120` |
 | `NODE_ENV` | Entorno (`production` activa cookies seguras) | — |
+| `DEV_USER` | Usuario del panel privado `/panel-dev` (sin esto, el panel da 404) | — |
+| `DEV_PASSWORD_HASH` | Contraseña del panel en hash bcrypt | — |
+| `DEV_SESSION_TIMEOUT_MIN` | Minutos de inactividad del panel (5–720) | `60` |
 
 Ejemplo en `.env.example`.
 
@@ -73,6 +76,22 @@ Ejemplo en `.env.example`.
 - Cookies `HttpOnly` + `SameSite=strict`.
 - Auditoría de acciones clave (login, cambios de precio, borrados, apertura/cierre de caja, backups).
 
+## Panel del desarrollador (`/panel-dev`)
+
+Interruptor de acceso privado: suspende la web (mantenimiento) o la habilita de nuevo. No aparece en el menú ni en el PWA.
+
+- Se activa solo si existen `DEV_USER` y `DEV_PASSWORD_HASH`; si faltan, la ruta responde **404**.
+- Login propio con sesión aparte (`dev_sid`, 60 min de inactividad) y CSRF propio; no comparte la sesión del bar.
+- Historial de los últimos 50 cambios (fecha, de activa a suspendida o viceversa, mensaje).
+- Al suspender: las páginas muestran **503** con el mensaje indicado, `/api/*` responde **403** y los archivos estáticos y el cron de mantenimiento siguen disponibles. El panel nunca se bloquea.
+- Generar el hash de la contraseña (pide la clave y la imprime en bcrypt):
+
+```bash
+node -e "console.log(require('bcryptjs').hashSync(process.argv[1], 10))" "TU_CLAVE"
+```
+
+En Vercel, tras cambiar estas variables hay que **redeployar**.
+
 ## Qué NO subir a GitHub
 
 Ya están en `.gitignore`:
@@ -89,14 +108,14 @@ server/
   app.js              → arranque, middleware, montaje de rutas
   config/db.js        → conexión SQLite + schema + índices + seed
   config/constants.js → roles, módulos, nowCO(), sumarMinutos()
-  middlewares/        → auth, roles, rateLimit, auditoria, csrf
+  middlewares/        → auth, roles, rateLimit, auditoria, csrf, licencia
   routes/             → auth, caja, categorias, productos, mesas, cuentas,
                         ventas, inventario, gastos, alertas, usuarios,
-                        configuracion, dashboard, reportes
+                        configuracion, dashboard, reportes, dev (/panel-dev)
 public/
   index.html          → SPA (login + shell)
-  css/                → variables, layout, components
-  js/                 → app.js, api.js, state.js, ui.js
+  css/                → variables, layout, components, panel-dev
+  js/                 → app.js, api.js, state.js, ui.js, pwa.js
   js/modules/         → inicio, auth, facturacion, gestion (productos y
                         categorías), mesas, ventas, reportes, caja, alertas,
                         usuarios, configuracion, recortador

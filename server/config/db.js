@@ -445,6 +445,12 @@ export async function limpiarSesiones() {
   return info.changes;
 }
 
+// Borra las sesiones expiradas del panel del desarrollador
+export async function limpiarSesionesDev() {
+  const info = await db.prepare('DELETE FROM sesiones_dev WHERE expira_en < ?').run(nowCO());
+  return info.changes;
+}
+
 // Crea el primer propietario si no hay ningún usuario
 export async function seedAdmin() {
   const row = await db.prepare('SELECT COUNT(*) AS c FROM usuarios').get();

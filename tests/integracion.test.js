@@ -77,6 +77,39 @@ describe('Chamalú Beer - Tests de Integración', () => {
     });
   });
 
+  describe('Licencia (interruptor de acceso)', () => {
+    test('Existen las tablas de licencia y sesiones del panel', () => {
+      const tablas = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all().map(t => t.name);
+      for (const t of ['licencia', 'licencia_historial', 'sesiones_dev']) {
+        assert.ok(tablas.includes(t), `Falta la tabla: ${t}`);
+      }
+    });
+
+    test('La licencia inicia activa y es una sola fila', () => {
+      const filas = db.prepare('SELECT * FROM licencia').all();
+      assert.strictEqual(filas.length, 1, 'la licencia debe tener una sola fila');
+      assert.strictEqual(filas[0].id, 1);
+      assert.strictEqual(filas[0].estado, 'activa');
+    });
+
+    test('El historial registra cambios', () => {
+      const info = db.prepare(
+        'INSERT INTO licencia_historial (fecha, estado_anterior, estado_nuevo, mensaje) VALUES (?, ?, ?, ?)'
+      ).run(nowCO(), 'activa', 'suspendida', 'prueba');
+      assert.ok(info.lastInsertRowid > 0);
+      const fila = db.prepare('SELECT * FROM licencia_historial WHERE id = ?').get(info.lastInsertRowid);
+      assert.strictEqual(fila.estado_nuevo, 'suspendida');
+      db.prepare('DELETE FROM licencia_historial WHERE id = ?').run(info.lastInsertRowid);
+    });
+
+    test('El estado solo admite activa o suspendida', () => {
+      assert.throws(
+        () => db.prepare("UPDATE licencia SET estado = 'otro' WHERE id = 1").run(),
+        'la base debe rechazar un estado inválido'
+      );
+    });
+  });
+
   describe('Autenticación y Seguridad', () => {
     test('Las contraseñas están hasheadas con bcrypt', () => {
       const admin = db.prepare("SELECT password_hash FROM usuarios WHERE usuario = 'admin'").get();

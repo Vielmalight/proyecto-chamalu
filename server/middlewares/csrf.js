@@ -36,6 +36,8 @@ export function verificarOrigen(req, res, next) {
 
 export function verificarTokenCsrf(req, res, next) {
   if (METODOS_SEGUROS.includes(req.method)) return next();
+  // El panel del desarrollador usa su propio token (cookie dev_sid)
+  if (req.path === '/panel-dev' || req.path.startsWith('/panel-dev/')) return next();
   if (RUTAS_SIN_TOKEN.includes(req.path)) return next();
 
   const tokenSesion = req.cookies?.sid;

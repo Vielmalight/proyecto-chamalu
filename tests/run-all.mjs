@@ -7,6 +7,7 @@ import net from 'node:net';
 import os from 'node:os';
 import fs from 'node:fs';
 import path from 'node:path';
+import bcrypt from 'bcryptjs';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -56,6 +57,10 @@ const env = {
   BACKUPS_DIR: backupsDir,
   SESSION_SECRET: 'test-secret',
   NODE_ENV: 'test',
+  // Credenciales del panel del desarrollador para las pruebas
+  DEV_USER: 'dev',
+  DEV_PASSWORD_HASH: bcrypt.hashSync('dev123', 4),
+  DEV_SESSION_TIMEOUT_MIN: '60',
 };
 
 function limpiar() {
